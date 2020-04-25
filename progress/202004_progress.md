@@ -13,7 +13,7 @@ https://www.youtube.com/playlist?list=PLQFWRIgi7fPQ6ftmkro5Xnb-Ml4DRWV3v
 https://www.youtube.com/playlist?list=PLQFWRIgi7fPQ6ftmkro5Xnb-Ml4DRWV3v
 
 * League of Legends Wolrdsのルールを調査した。<br>
-細かいルールはhttps://ja.wikipedia.org/wiki/League_of_Legends_World_Championshipに記載してある。<br>
+細かいルールはhttps://ja.wikipedia.org/wiki/League_of_Legends_World_Championship に記載してある。<br>
 計算すると、Worldsシリーズのみで102試合以上行われることがわかった。<br>
 なお、2020年は2019-2020のコロナ流行によって変更があるかもしれない。
 
