@@ -23,3 +23,13 @@ Group Stage https://www.youtube.com/playlist?list=PLPZ7h6L6LC7UvH8KfJnP95p099QO_
 Knockout Stage https://www.youtube.com/playlist?list=PLPZ7h6L6LC7Whu0zWRXvrVLAciyZLy1LR <br>
 Final https://www.youtube.com/playlist?list=PLPZ7h6L6LC7XU8lVEbxEM40LMBbSeDf62
 
+##### 0426
+* Bottom-Up and Top-Down Attention for Image Captioning and Visual Question Answering のabstract, conclusion, Approachを読んだ。 <br>
+image captioningにおける2018年のSOTAの論文。Bottom-UpとTop-Downを組み合わせたAttentionメカニズムを提案している。<br>
+一通り手法を読んで理解した(つもり)だが、どの辺が"Bottom-Up"や"Top-Down"なのか、先行研究との差分は何なのか、など疑問が残った。また、Attention・LSTMの理解不足を感じた。 <br>
+2018年以前のimage captioningの流れを把握した上で、実装を眺めた方が良いかもしれない。 <br>
+https://panderson.me/images/1707.07998-up-down.pdf 
+
+* League of Legends Worlds 2019でダウンロードしたもののうち、再生リストを余計にまたいでいる部分(Group Stage)を再度以下のリストからダウンロードした。<br>
+https://www.youtube.com/playlist?list=PLQFWRIgi7fPQ6ftmkro5Xnb-Ml4DRWV3v <br>
+
