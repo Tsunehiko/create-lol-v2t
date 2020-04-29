@@ -33,3 +33,14 @@ https://panderson.me/images/1707.07998-up-down.pdf
 * League of Legends Worlds 2019でダウンロードしたもののうち、再生リストを余計にまたいでいる部分(Group Stage)を再度以下のリストからダウンロードした。<br>
 https://www.youtube.com/playlist?list=PLQFWRIgi7fPQ6ftmkro5Xnb-Ml4DRWV3v <br>
 
+##### 0427
+* 2018年以前のimage captioningの流れを掴むため、以下のスライドを読んだ。 <br>
+https://www.slideshare.net/YoshitakaUshiku/deep-learning-73499744
+
+##### 0428
+* PySceneDetectを試してみた <br>
+thresholdの調整が難しい
+
+* ダウンロードは要領一杯で途中で止まっている<br>
+2018のPlayIn全てとGroupの一部がダウンロード済み
+
