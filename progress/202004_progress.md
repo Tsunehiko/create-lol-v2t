@@ -44,3 +44,9 @@ thresholdの調整が難しい
 * ダウンロードは要領一杯で途中で止まっている<br>
 2018のPlayIn全てとGroupの一部がダウンロード済み
 
+##### 0429
+* ゼミ資料作成
+
+##### 0430
+* 以下のレポジトリについて、説明を読んだ。Teacher forcingについて調べた。<br>
+https://github.com/poojahira/image-captioning-bottom-up-top-down
