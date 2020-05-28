@@ -16,7 +16,19 @@ hypotheses(推測):['a child sitting in a car holding a frisbee']
 0501から使用を始めたレポジトリでは、Captioning Modelの入力として既に特定のデータセットに対してBottom-Up Attention Modelを適用し得られた特徴量を使用していることがわかった。つまり、新規の画像(自分で用意した画像)にこのCaptioning Modelを適用するためにはBottom-Up Attention Modelを自分で用意する必要がある。したがって、以下のレポジトリをクローンし、本モデルを適用できるよう準備を行なっている。このレポジトリではPython2下でのビルドやCaffeの導入などが必要であり、不慣れであるため苦戦している。
 https://github.com/peteanderson80/bottom-up-attention
 
+##### 0507~0513
+* DeepClusterを試した <br>
+Facebookが公開しているレポジトリをとりあえず動かせるようにした。試しにLoLの動画1本(約90分)を15fpsで画像にし、1000Clustersに分類するタスクを行った。結果はほとんどランダムに分類されており、あまり良い性能とはいえなかった。
+
 ##### 0516
 * PySceneDetectの導入(2回目) <br>
 PySceneDetectのsourceをダウンロードし、PySceneDetectディレクトリ下で使用できるようにした。また、deepclusterのプログラム中でPython Interfaceとして呼び出せるようにdeepclusterで用いている仮想環境にも導入した。<br>
 具体的には、deepclusterで用いているconda仮想環境"deepcluster"をactivateした状態でPySceneDetectのインストールを行っている。これにより、PySceneDetectディレクトリ下でなくてもdeepclusterというconda環境をactivateするだけで使用可能になっている。
+
+##### 0514~0520
+* DeepClusterを動画で試した <br>
+PySceneDetectを用いて細かく分割した動画から連続する64フレームを抽出し、集めたものを用いて10Clustersに分類した。NNにはAlexNetを用いた。結果はほとんどランダムに分類されており、良い性能ではなかった。
+
+##### 0521~0527
+* DeepClusterのモデルをAlexNetからC3Dに変更した <br>
+DeepClusterのAlexNetの代わりに3次元データを扱えるC3Dモデルを導入した。PySceneDetectを用いて細かく分割した動画から連続する16フレームを抽出し、それを1つの入力とした。動画1本(約90分)を379分割したものをデータとし、5Clustersに分類するタスクを行ったが、結果はほとんどランダムであった。また、動画を3本に増やし、計1000のデータセットを用いて同様の実験を行なったが、lossがnullになってしまった。
