@@ -1,1 +1,12 @@
 data
+exp
+dataset/stats
+dataset/videos
+dataset/label
+dataset/frame
+dataset/test_data
+log
+__pycache__
+log
+.python-version
+label.csv
