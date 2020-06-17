@@ -1,5 +1,6 @@
 import time
 import os
+import pickle
 
 from tqdm import tqdm
 import cv2
@@ -14,7 +15,7 @@ import torchvision.transforms as transforms
 
 class VideoDataset(data.Dataset):
 
-    def __init__(self, video_dir, frame_dir, pre_label_path, label_path, clip_len=16, preprocess=False, transform=None):
+    def __init__(self, video_dir, frame_dir, pre_label_path, label_path, calc_path, clip_len=16, preprocess=False, transform=None):
         self.video_dir = video_dir
         self.frame_dir = frame_dir
         self.pre_label_path = pre_label_path
@@ -65,7 +66,23 @@ class VideoDataset(data.Dataset):
             print('Preprocessing of the dataset, this will take long, but it will be done only once.')
             self.preprocess()
 
-        self.calc_mean_std()
+        mean_path = os.path.join(calc_path, 'mean.pt')
+        if os.path.exists(mean_path):
+            print("Load mean...")
+            self.mean = torch.load(mean_path)
+        else:
+            if not os.path.exists(calc_path):
+                os.makedirs(calc_path)
+            self.mean = self.calc_mean(mean_path)
+
+        std_path = os.path.join(calc_path, 'std.pt')
+        if os.path.exists(std_path):
+            print("Load std...")
+            self.std = torch.load(std_path)
+        else:
+            if not os.path.exists(calc_path):
+                os.makedirs(calc_path)
+            self.std = self.calc_std(std_path)
 
     def __len__(self):
         return sum(len(f) for f in self.fnames)
@@ -140,7 +157,7 @@ class VideoDataset(data.Dataset):
 
         capture.release()
 
-    def calc_mean_std(self):
+    def calc_mean(self, save_path):
         print("Calculating mean...")
         mean = torch.zeros((3, self.resize_height, self.resize_width))
         for j, path in enumerate(tqdm(self.fpaths)):
@@ -148,8 +165,11 @@ class VideoDataset(data.Dataset):
             if self.transform is not None:
                 for i, frame in enumerate(buf):
                     mean += self.transform(frame)
-        self.mean = mean / len(self.fpaths)
+        mean = mean / len(self.fpaths)
+        torch.save(mean, save_path)
+        return mean
 
+    def calc_std(self, save_path):
         print("Calculting std...")
         std = torch.zeros((3, self.resize_height, self.resize_width))
         for j, path in enumerate(tqdm(self.fpaths)):
@@ -158,7 +178,8 @@ class VideoDataset(data.Dataset):
                 for i, frame in enumerate(buf):
                     std += torch.pow((self.transform(frame) - self.mean), 2)
         std = torch.sqrt(std / len(self.fpaths))
-        self.std = std
+        torch.save(std, save_path)
+        return std
 
     def load_frames(self, file_dir):
         frames = sorted([os.path.join(file_dir, img) for img in os.listdir(file_dir)])
@@ -186,19 +207,26 @@ class VideoDataset(data.Dataset):
         buf = (buf - self.mean) / (self.std + 10e-5)
         return buf
 
+    def save_pickle(self, obj, file):
+        with open(file, 'wb') as f:
+            pickle.dump(obj, f)
+
+    def load_pickle(self, file):
+        with open(file, 'rb') as f:
+            pickle.load(f)
 
 
 class FrameDataset(data.Dataset):
 
-    def __init__(self, video_dir, frame_dir, label_path, preprocess=False, transform=None):
+    def __init__(self, video_dir, frame_dir, label_path, calc_path, input_size, preprocess=False, transform=None):
         self.video_dir = video_dir
         self.frame_dir = frame_dir
         self.label_path = label_path
         self.transform = transform
         
-        self.resize_height = 112
-        self.resize_width = 112
-        self.crop_size = 112
+        self.resize_height = input_size
+        self.resize_width = input_size
+        self.crop_size = input_size
 
         self.vnames = []
         self.vnames_per_el = []
@@ -223,7 +251,24 @@ class FrameDataset(data.Dataset):
             print('Preprocessing of the dataset, this will take long, but it will be done only once.')
             self.preprocess()
 
-        # self.calc_mean_std()
+
+        mean_path = os.path.join(calc_path, 'mean.pt')
+        if os.path.exists(mean_path):
+            print("Load mean...")
+            self.mean = torch.load(mean_path)
+        else:
+            if not os.path.exists(calc_path):
+                os.makedirs(calc_path)
+            self.mean = self.calc_mean(mean_path)
+
+        std_path = os.path.join(calc_path, 'std.pt')
+        if os.path.exists(std_path):
+            print("Load std...")
+            self.std = torch.load(std_path)
+        else:
+            if not os.path.exists(calc_path):
+                os.makedirs(calc_path)
+            self.std = self.calc_std(std_path)
 
     def __len__(self):
         return sum(len(f) for f in self.fnames)
@@ -232,11 +277,11 @@ class FrameDataset(data.Dataset):
         frame = self.load_frame(self.fpaths[index])
         if self.transform is not None:
             frame = self.transform(frame)
-        # frame = self.normalize(frame)
+        frame = self.normalize(frame)
 
         label = pd.read_csv(self.label_path).iat[index, 2]
 
-        return buf_tr, label, self.vnames_per_el[index]
+        return frame, label, self.vnames_per_el[index]
 
     def check_preprocess(self):
         if not os.path.exists(self.frame_dir):
@@ -268,7 +313,7 @@ class FrameDataset(data.Dataset):
         frame_width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        capture_frame = frame_count
+        capture_frame = frame_count // 2
 
         count = 0
         retaining = True
@@ -280,30 +325,33 @@ class FrameDataset(data.Dataset):
             if count == capture_frame:
                 if frame_height != self.resize_height or frame_width != self.resize_width:
                     frame = cv2.resize(frame, (self.resize_width, self.resize_height))
-                cv2.imwrite(filename=os.path.join(base_path, f"image.jpg"), img=frame)
+                cv2.imwrite(filename=os.path.join(frame_dir, f"image.jpg"), img=frame)
             
             count += 1
 
         capture.release()
 
-    def calc_mean_std(self):
+    def calc_mean(self, save_path):
         print("Calculating mean...")
+        mean = torch.zeros((3, self.resize_height, self.resize_width))
         for j, path in enumerate(tqdm(self.fpaths)):
-            buf = self.load_frames(path)
+            frame = self.load_frame(path)
             if self.transform is not None:
-                for i, frame in enumerate(buf):
-                    mean += self.transform(frame)
-        self.mean = mean / len(self.fpaths)
+                mean += self.transform(frame)
+        mean = mean / len(self.fpaths)
+        torch.save(mean, save_path)
+        return mean
 
+    def calc_std(self, save_path):
         print("Calculting std...")
         std = torch.zeros((3, self.resize_height, self.resize_width))
         for j, path in enumerate(tqdm(self.fpaths)):
-            buf = self.load_frames(path)
+            frame = self.load_frame(path)
             if self.transform is not None:
-                for i, frame in enumerate(buf):
-                    std += torch.pow((self.transform(frame) - self.mean), 2)
+                std += torch.pow((self.transform(frame) - self.mean), 2)
         std = torch.sqrt(std / len(self.fpaths))
-        self.std = std
+        torch.save(std, save_path)
+        return std
 
     def load_frame(self, file_dir):
         frame_path = os.path.join(file_dir, os.listdir(file_dir)[0])
@@ -325,3 +373,11 @@ class FrameDataset(data.Dataset):
     def normalize(self, buf):
         buf = (buf - self.mean) / (self.std + 10e-5)
         return buf
+
+    def save_pickle(self, obj, file):
+        with open(file, 'wb') as f:
+            pickle.dump(obj, f)
+
+    def load_pickle(self, file):
+        with open(file, 'rb') as f:
+            pickle.load(f)
