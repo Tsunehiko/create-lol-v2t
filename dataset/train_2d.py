@@ -54,10 +54,10 @@ def main(args):
 
     model, input_size = initialize_model(args.model_name, 2, feature_extract)
     print(f"{torch.cuda.device_count()} GPUs are being used.")
-    # if torch.cuda.device_count() > 1:
-    #     model = nn.DataParallel(model)
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
     model = model.to(device)
-    # cudnn.benchmark = True
+    cudnn.benchmark = True
 
     transform = transforms.Compose([transforms.RandomResizedCrop(input_size),
                                     transforms.RandomHorizontalFlip(),
