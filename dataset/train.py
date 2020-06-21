@@ -105,7 +105,7 @@ def main(args):
         
         model.train()
         train_losses = 0.0
-        train_corrects = 0.0
+        train_corrects = 0
         for frames, labels in train_dataloader:
             frames = frames.to(device)
             labels = labels.to(device)
@@ -131,7 +131,7 @@ def main(args):
 
         model.eval()
         valid_losses = 0.0
-        valid_corrects = 0.0
+        valid_corrects = 0
         for frames, labels in val_dataloader:
             frames = frames.to(device)
             labels = labels.to(device)

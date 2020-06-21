@@ -52,7 +52,7 @@ def main(args):
         os.makedirs(writer_dir)
     writers = {x : SummaryWriter(log_dir=os.path.join(writer_dir, x)) for x in ['train', 'valid']}
 
-    model, input_size = initialize_model(args.model_name, 2, feature_extract)
+    model, input_size = initialize_model(args.model_name, 1, feature_extract)
     print(f"{torch.cuda.device_count()} GPUs are being used.")
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
@@ -71,8 +71,8 @@ def main(args):
 
     datasets = {x: FrameDataset(video_paths[x], frame_paths[x], label_paths[x], calc_paths[x], input_size, transform=transform) for x in ['train', 'valid']}
 
-    dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=args.batch, num_workers=args.workers, pin_memory=True) for x in ['train', 'valid']}
-    
+    dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=args.batch, num_workers=args.workers, pin_memory=True, shuffle=True) for x in ['train', 'valid']}
+
     params_to_update = model.parameters()
     print("Params to learn:")
     if feature_extract:
@@ -85,7 +85,8 @@ def main(args):
         for name,param in model.named_parameters():
             if param.requires_grad == True:
                 print("\t", name)
-    optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
+    # optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
+    optimizer = optim.Adam(params_to_update, lr=0.001, weight_decay=0)
 
     start_epoch = 0
     model_save_dir = os.path.join(args.log, 'models')
@@ -97,7 +98,7 @@ def main(args):
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         start_epoch = checkpoint['epoch']
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.BCEWithLogitsLoss()
     
     train(model, dataloaders, criterion, optimizer, args.epochs, model_save_dir, args.interval, writers, start_epoch=start_epoch, is_inception=(args.model_name=="inception"))
 
@@ -108,6 +109,8 @@ def main(args):
 
 def train(model, dataloaders, criterion, optimizer, num_epochs,  model_save_dir, interval, writers, start_epoch=0, is_inception=False):
     since = time.time()
+
+    best_val_acc = 0.0
 
     for epoch in range(start_epoch, num_epochs):
         print("-" * 20)
@@ -137,16 +140,17 @@ def train(model, dataloaders, criterion, optimizer, num_epochs,  model_save_dir,
                         loss = loss1 + 0.4*loss2
                     else:
                         outputs = model(inputs)
-                        loss = criterion(outputs, labels)
-
-                    _, preds = torch.max(outputs, 1)
+                        labels = labels.type_as(outputs)
+                        loss = criterion(outputs.view(-1), labels)
+                    
+                    probs = torch.sigmoid(outputs.view(-1)) > 0.5
 
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
 
                 running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
+                running_corrects += torch.sum(probs == labels.data)
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
@@ -154,7 +158,19 @@ def train(model, dataloaders, criterion, optimizer, num_epochs,  model_save_dir,
             writers[phase].add_scalar("loss", epoch_loss, epoch)
             writers[phase].add_scalar("accuracy", epoch_acc, epoch)
 
-            print("{} Loss: {:.4f} Acc:{:.4f}".format(phase, epoch_loss, epoch_acc))
+            print("{} Loss: {:.7f} Acc:{:.7f}".format(phase, epoch_loss, epoch_acc))
+
+        if phase == 'valid' and best_val_acc < epoch_acc:
+            best_val_acc = epoch_acc
+            print("Saving best model...")
+            if not os.path.exists(model_save_dir):
+                os.makedirs(model_save_dir)
+            torch.save({
+                        'epoch': epoch,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict(),
+                        'loss': loss
+                        },os.path.join(model_save_dir, "best.pkl"))
 
         if epoch % interval == 0:
             print("Saving model...")
@@ -181,10 +197,28 @@ def initialize_model(model_name, num_classes, feature_extract=False, use_pretrai
     model_ft = None
     input_size = 0
 
-    if model_name == 'resnet':
+    if model_name == 'resnet18':
         """ Resnet18
         """
         model_ft = models.resnet18(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.fc.in_features
+        model_ft.fc = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+
+    elif model_name == 'resnet152':
+        """ Resnet152
+        """
+        model_ft = models.resnet152(pretrained=use_pretrained)
+        set_parameter_requires_grad(model_ft, feature_extract)
+        num_ftrs = model_ft.fc.in_features
+        model_ft.fc = nn.Linear(num_ftrs, num_classes)
+        input_size = 224
+
+    elif model_name == 'resnext':
+        """ ResNext50_32x4d
+        """
+        model_ft = models.resnext50_32x4d(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
