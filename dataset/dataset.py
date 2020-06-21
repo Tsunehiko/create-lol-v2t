@@ -84,6 +84,11 @@ class VideoDataset(data.Dataset):
                 os.makedirs(calc_path)
             self.std = self.calc_std(std_path)
 
+        label_csv = pd.read_csv(self.label_path)
+        print(label_csv['label'].value_counts())
+
+        assert len(label_csv) == len(self.fpaths)
+
     def __len__(self):
         return sum(len(f) for f in self.fnames)
 
@@ -97,7 +102,7 @@ class VideoDataset(data.Dataset):
                 buf_tr[i] = self.normalize(frame_tr)
         buf_tr = buf_tr.permute(1,0,2,3)
 
-        label = pd.read_csv(self.label_path).iat[index, 2]
+        label = pd.read_csv(self.label_path).iat[index, 3]
 
         return buf_tr, label
 
@@ -240,7 +245,7 @@ class FrameDataset(data.Dataset):
                 frame_dir = os.path.join(self.frame_dir, vname, v_el)
                 self.fpaths.append(frame_dir)
                 video_elements.append(frame_dir)
-                self.vnames_per_el.append(vname)
+                self.vnames_per_el.append(v_el)
             self.fnames.append(video_elements)
 
         print(f"Num of videos: {len(self.vnames)}")
@@ -269,6 +274,13 @@ class FrameDataset(data.Dataset):
             if not os.path.exists(calc_path):
                 os.makedirs(calc_path)
             self.std = self.calc_std(std_path)
+        
+        self.normalizer = transforms.Normalize(mean=self.mean, std=self.std)
+
+        label_csv = pd.read_csv(self.label_path)
+        print(label_csv['label'].value_counts())
+
+        assert len(label_csv) == len(self.fpaths)
 
     def __len__(self):
         return sum(len(f) for f in self.fnames)
@@ -277,9 +289,10 @@ class FrameDataset(data.Dataset):
         frame = self.load_frame(self.fpaths[index])
         if self.transform is not None:
             frame = self.transform(frame)
-        frame = self.normalize(frame)
+        # frame = self.normalize(frame)
+        frame = self.normalizer(frame)
 
-        label = pd.read_csv(self.label_path).iat[index, 2]
+        label = pd.read_csv(self.label_path).iat[index, 3]
 
         return frame, label, self.vnames_per_el[index]
 
@@ -333,23 +346,28 @@ class FrameDataset(data.Dataset):
 
     def calc_mean(self, save_path):
         print("Calculating mean...")
-        mean = torch.zeros((3, self.resize_height, self.resize_width))
+        mean = torch.zeros(3)
         for j, path in enumerate(tqdm(self.fpaths)):
             frame = self.load_frame(path)
             if self.transform is not None:
-                mean += self.transform(frame)
+                frame = self.transform(frame)
+                mean += frame.sum(dim=[1,2]) / (frame.size(1) * frame.size(2))
         mean = mean / len(self.fpaths)
+        print(f"mean: {mean}")
         torch.save(mean, save_path)
         return mean
 
     def calc_std(self, save_path):
         print("Calculting std...")
-        std = torch.zeros((3, self.resize_height, self.resize_width))
+        std = torch.zeros(3)
         for j, path in enumerate(tqdm(self.fpaths)):
             frame = self.load_frame(path)
             if self.transform is not None:
-                std += torch.pow((self.transform(frame) - self.mean), 2)
+                frame = self.transform(frame)
+                for i in range(3):
+                    std[i] += torch.pow((frame[i] - self.mean[i]), 2).sum() / (frame.size(1) * frame.size(2))
         std = torch.sqrt(std / len(self.fpaths))
+        print(f"std: {std}")
         torch.save(std, save_path)
         return std
 
