@@ -14,13 +14,13 @@ from scenedetect.detectors.content_detector import ContentDetector
 from scenedetect.video_splitter import split_video_ffmpeg
 
 def main():
-    video_path = "./test_data/valid"
-    save_dir = "./test_data/valid/video"
-    csv_path = "./test_data/label/valid.csv"
+    video_path = "./videos/valid"
+    save_dir = "./new_data/valid"
+    csv_path = "./new_label/valid.csv"
     timecodes = [
-        # ["00:09:32.000", "00:09:34.000", "00:45:09.000", "00:45:11.000"], 
-        # ["00:13:07.000", "00:13:09.000", "00:41:32.000", "00:41:34.000"], 
-        # ["00:09:41.000", "00:09:43.000", "00:43:12.000", "00:43:14.000"],
+        ["00:09:32.000", "00:09:34.000", "00:45:09.000", "00:45:11.000"],
+        ["00:13:07.000", "00:13:09.000", "00:41:32.000", "00:41:34.000"],
+        ["00:09:41.000", "00:09:43.000", "00:43:12.000", "00:43:14.000"],
         ["00:11:15.000", "00:11:17.000", "00:40:13.000", "00:40:15.000"],
         ["00:07:55.000", "00:07:57.000", "00:32:07.000", "00:32:09.000"],
         ["00:16:38.000", "00:16:40.000", "00:41:42.000", "00:41:44.000"],
@@ -68,7 +68,7 @@ def main():
         ["00:19:10.000", "00:19:12.000", "00:47:06.000", "00:47:08.000"],
         ["00:14:25.000", "00:14:27.000", "00:55:52.000", "00:55:54.000"],
         ["00:39:49.000", "00:39:51.000", "01:11:57.000", "01:11:58.000"]
-        ]
+    ]
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     if not os.path.exists("./stats"):
@@ -76,16 +76,16 @@ def main():
 
     with open(csv_path, 'w') as f:
         writer = csv.writer(f)
-        writer.writerow(['video_name', 'video_num', 'label'])
+        writer.writerow(['video_num','video_name', 'video_num', 'label'])
         for i, vpath in enumerate(sorted(os.listdir(video_path))):
             print(vpath)
             fpath = os.path.join(video_path, vpath)
             start, end, length = make_dataset(fpath, vpath, timecodes[i], save_dir)
             for j in range(length):
                 if start <= j and end >= j:
-                    writer.writerow([vpath, j, 1])
+                    writer.writerow([i, vpath, j, 1])
                 else:
-                    writer.writerow([vpath, j, 0])
+                    writer.writerow([i, vpath, j, 0])
 
 
 def make_dataset(video_path, video_name, timecodes, save_dir):
@@ -147,6 +147,8 @@ def make_dataset(video_path, video_name, timecodes, save_dir):
                     end_timecode = timecode
         threshold = min(start_content_val, end_content_val)
 
+        print(f"Start Time: {start_timecode}, End Time: {end_timecode}")
+
     finally:
         video_manager.release()
 
@@ -182,10 +184,10 @@ def make_dataset(video_path, video_name, timecodes, save_dir):
         end_video_num = 0
         for i, scene in enumerate(scene_list):
             if scene[0].get_timecode() >= start_timecode and start_video_num == 0:
-                start_video_num = i + 1
+                start_video_num = i
                 print(f"start video: {start_video_num}")
             if scene[1].get_timecode() >= end_timecode and end_video_num == 0:
-                end_video_num = i - 1
+                end_video_num = i
                 print(f"end video: {end_video_num}")
 
     finally:

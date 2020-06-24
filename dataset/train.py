@@ -4,7 +4,6 @@ import time
 
 from tqdm import tqdm
 import numpy as np
-from sklearn.model_selection import train_test_split
 
 import torch
 import torch.nn as nn
@@ -61,9 +60,11 @@ def main(args):
     valid_pre_label_path = os.path.join(args.label_path, "valid.csv")
     train_label_path = os.path.join(args.label_path, "new_train.csv")
     valid_label_path = os.path.join(args.label_path, "new_valid.csv")
+    train_calc_path = os.path.join(args.log, 'calc/train')
+    valid_calc_path = os.path.join(args.log, 'calc/valid')
 
-    train_dataset = VideoDataset(train_video_path, train_frame_path, train_pre_label_path, train_label_path, clip_len=args.clip_len, transform=transform)
-    val_dataset = VideoDataset(valid_video_path, valid_frame_path, valid_pre_label_path, valid_label_path, clip_len=args.clip_len, transform=transform)
+    train_dataset = VideoDataset(train_video_path, train_frame_path, train_pre_label_path, train_label_path, train_calc_path, clip_len=args.clip_len, transform=transform)
+    val_dataset = VideoDataset(valid_video_path, valid_frame_path, valid_pre_label_path, valid_label_path, valid_calc_path, clip_len=args.clip_len, transform=transform)
 
     train_dataloader = torch.utils.data.DataLoader(train_dataset,
                                             batch_size=args.batch,
@@ -77,10 +78,10 @@ def main(args):
                                             pin_memory=True
                                             )
    
+    print(f"{torch.cuda.device_count()} GPUs are being used.")
     model = C3D()
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
-        print(f"{torch.cuda.device_count()} GPUs are being used.")
     model = model.to(device)
     cudnn.benchmark = True
 
@@ -104,7 +105,7 @@ def main(args):
         
         model.train()
         train_losses = 0.0
-        train_corrects = 0.0
+        train_corrects = 0
         for frames, labels in train_dataloader:
             frames = frames.to(device)
             labels = labels.to(device)
@@ -130,22 +131,22 @@ def main(args):
 
         model.eval()
         valid_losses = 0.0
-        valid_corrects = 0.0
+        valid_corrects = 0
         for frames, labels in val_dataloader:
             frames = frames.to(device)
             labels = labels.to(device)
 
             with torch.no_grad():
                 pred = model(frames)
-            val_loss = criterion(pred, labels)
+                val_loss = criterion(pred, labels)
 
             probs = nn.Softmax(dim=1)(pred)
             _, preds = torch.max(probs, 1)
             valid_losses += val_loss.item() * frames.size(0)
             valid_corrects += torch.sum(preds == labels.data)
 
-        valid_epoch_loss = torch.div(valid_losses, len(val_dataloader.dataset))
-        valid_epoch_correct = torch.div(valid_corrects.double(), len(val_dataloader.dataset))
+        valid_epoch_loss = valid_losses / len(val_dataloader.dataset)
+        valid_epoch_correct = valid_corrects.double() / len(val_dataloader.dataset)
         writer_valid.add_scalar("loss", valid_epoch_loss, epoch)
         writer_valid.add_scalar("accuracy", valid_epoch_correct, epoch)
         print("valid Loss: {:.4f} Acc: {:.4f}".format(valid_epoch_loss, valid_epoch_correct))
