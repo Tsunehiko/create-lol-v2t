@@ -5,3 +5,9 @@ C3Dモデルを通して得た4096次元の特徴量をPCAを使って100次元�
 ##### 0610~0617
 * C3Dモデルと2Dモデルのfinetuningを行った <br>
 C3Dモデルを使った識別モデルの教師あり学習を行った。validationのaccuracyがepoch0から一定値で動かないため、何かバグがあった可能性があるが、原因は特定できなかった。学習自体もepoch3で既にlossが収束するなど、うまくいっていない様子だった。2Dモデルのfinetuningではalexnetとsqueezenetの2つを使った(どちらもtorchvisionに含まれているものを使用した)。alexnetはlossも順調に下がり、accuracyも上昇したので学習はうまくいったように見える(ただし、それぞれの変化量はそこまで大きくない。最初からaccは0.9を超えており、学習済みであることが活きていたためと考えられる)。squeezenetはloss/acc共に挙動がおかしくなっており、うまくいかなかった。
+
+##### 0618~0624
+* 2Dモデルのfinetuningの続きを行った <br>
+2Dモデルのfinetuningを行った。resnet18で試すところから始めていたが、accuracyの値が常に一定になってしまい、正確な値をとることができていなかった。accuracyの計算をnn.Sigmoid()を使う手法からtorch.sigmoid()を使う手法に変えることで、正常な値の取得に成功した。resnet18, resnet101, vgg11, squeezenet, resnext50_32x4dで試した。精度はどれも96%前後(squeezenetのみ92%程度)であり、optimizerを変えても精度にほとんど変化はなかった。
+* Video Captioningの関連研究を調査した <br>
+読んだ方が良さそうな論文をリストアップした。主にCVPR2016-2020, ICCV2018, ECCV2018あたりから。まだ読んでいない。
