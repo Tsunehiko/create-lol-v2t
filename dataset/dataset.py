@@ -12,6 +12,9 @@ import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
 
+from logging import getLogger
+
+logger = getLogger('log').getChild(__name__)
 
 class VideoDataset(data.Dataset):
 
@@ -248,18 +251,18 @@ class FrameDataset(data.Dataset):
                 self.vnames_per_el.append(v_el)
             self.fnames.append(video_elements)
 
-        print(f"Num of videos: {len(self.vnames)}")
+        logger.info(f"Num of videos: {len(self.vnames)}")
         for i, v_el in enumerate(self.fnames):
-            print(f"Num of {self.vnames[i]}'s elements: {len(v_el)}")
+            logger.info(f"Num of {self.vnames[i]}'s elements: {len(v_el)}")
 
         if (not self.check_preprocess()) or preprocess:
-            print('Preprocessing of the dataset, this will take long, but it will be done only once.')
+            logger.info('Preprocessing of the dataset, this will take long, but it will be done only once.')
             self.preprocess()
 
 
         mean_path = os.path.join(calc_path, 'mean.pt')
         if os.path.exists(mean_path):
-            print("Load mean...")
+            logger.debug("Load mean...")
             self.mean = torch.load(mean_path)
         else:
             if not os.path.exists(calc_path):
@@ -268,7 +271,7 @@ class FrameDataset(data.Dataset):
 
         std_path = os.path.join(calc_path, 'std.pt')
         if os.path.exists(std_path):
-            print("Load std...")
+            logger.debug("Load std...")
             self.std = torch.load(std_path)
         else:
             if not os.path.exists(calc_path):
@@ -278,7 +281,7 @@ class FrameDataset(data.Dataset):
         self.normalizer = transforms.Normalize(mean=self.mean, std=self.std)
 
         label_csv = pd.read_csv(self.label_path)
-        print(label_csv['label'].value_counts())
+        logger.info(label_csv['label'].value_counts())
 
         assert len(label_csv) == len(self.fpaths)
 
@@ -307,7 +310,7 @@ class FrameDataset(data.Dataset):
             os.makedirs(self.frame_dir)
 
         for vname in self.vnames:
-            print(f"Preprocessing `{vname}`")
+            logger.debug(f"Preprocessing `{vname}`")
             video_path = os.path.join(self.video_dir, vname)
             frame_dir = os.path.join(self.frame_dir, vname)
             for v_el in tqdm(os.listdir(video_path)):
@@ -345,7 +348,7 @@ class FrameDataset(data.Dataset):
         capture.release()
 
     def calc_mean(self, save_path):
-        print("Calculating mean...")
+        logger.debug("Calculating mean...")
         mean = torch.zeros(3)
         for j, path in enumerate(tqdm(self.fpaths)):
             frame = self.load_frame(path)
@@ -353,12 +356,12 @@ class FrameDataset(data.Dataset):
                 frame = self.transform(frame)
                 mean += frame.sum(dim=[1,2]) / (frame.size(1) * frame.size(2))
         mean = mean / len(self.fpaths)
-        print(f"mean: {mean}")
+        logger.info(f"mean: {mean}")
         torch.save(mean, save_path)
         return mean
 
     def calc_std(self, save_path):
-        print("Calculting std...")
+        logger.debug("Calculting std...")
         std = torch.zeros(3)
         for j, path in enumerate(tqdm(self.fpaths)):
             frame = self.load_frame(path)
@@ -367,7 +370,7 @@ class FrameDataset(data.Dataset):
                 for i in range(3):
                     std[i] += torch.pow((frame[i] - self.mean[i]), 2).sum() / (frame.size(1) * frame.size(2))
         std = torch.sqrt(std / len(self.fpaths))
-        print(f"std: {std}")
+        logger.info(f"std: {std}")
         torch.save(std, save_path)
         return std
 

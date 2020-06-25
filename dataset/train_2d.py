@@ -17,6 +17,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from dataset import FrameDataset
 
+from logging import getLogger, StreamHandler, Formatter, FileHandler, DEBUG, INFO, WARNING, ERROR, CRITICAL
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -39,7 +41,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(args):
+def main(args, logger):
 
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
@@ -53,7 +55,7 @@ def main(args):
     writers = {x : SummaryWriter(log_dir=os.path.join(writer_dir, x)) for x in ['train', 'valid']}
 
     model, input_size = initialize_model(args.model_name, 1, feature_extract)
-    print(f"{torch.cuda.device_count()} GPUs are being used.")
+    logger.info(f"{torch.cuda.device_count()} GPUs are being used.")
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
     model = model.to(device)
@@ -74,24 +76,24 @@ def main(args):
     dataloaders = {x: torch.utils.data.DataLoader(datasets[x], batch_size=args.batch, num_workers=args.workers, pin_memory=True, shuffle=True) for x in ['train', 'valid']}
 
     params_to_update = model.parameters()
-    print("Params to learn:")
+    logger.info("Params to learn:")
     if feature_extract:
         params_to_update = []
         for name,param in model.named_parameters():
             if param.requires_grad == True:
                 params_to_update.append(param)
-                print("\t", name)
+                logger.info("\t", name)
     else:
         for name,param in model.named_parameters():
             if param.requires_grad == True:
-                print("\t", name)
+                logger.info("\t", name)
     optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.7)
     # optimizer = optim.Adam(params_to_update, lr=0.001, weight_decay=0)
 
     start_epoch = 0
     model_save_dir = os.path.join(args.log, 'models')
     if os.path.exists(model_save_dir) and len(os.listdir(model_save_dir)) > 0:
-        print("Load pretrained model...")
+        logger.debug("Load pretrained model...")
         latest_path = os.path.join(model_save_dir, sorted(os.listdir(model_save_dir))[-1])
         checkpoint = torch.load(latest_path)
         model.load_state_dict(checkpoint['model_state_dict'])
@@ -113,8 +115,8 @@ def train(model, dataloaders, criterion, optimizer, num_epochs,  model_save_dir,
     best_val_acc = 0.0
 
     for epoch in range(start_epoch, num_epochs):
-        print("-" * 20)
-        print("Epoch {} / {}".format(epoch, args.epochs - 1))
+        logger.info("-" * 20)
+        logger.info("Epoch {} / {}".format(epoch, args.epochs - 1))
 
         for phase in ['train', 'valid']:
             if phase == 'train':
@@ -173,12 +175,12 @@ def train(model, dataloaders, criterion, optimizer, num_epochs,  model_save_dir,
             writers[phase].add_scalar("recall", recall, epoch)
             writers[phase].add_scalar("f1_score", f1, epoch)
 
-            print("{} Loss: {:.7f} Acc:{:.7f} Precision:{:.7f} Recall:{:.7f} F1:{:.7f}"
+            logger.info("{} Loss: {:.7f} Acc:{:.7f} Precision:{:.7f} Recall:{:.7f} F1:{:.7f}"
                     .format(phase, epoch_loss, epoch_acc, precision, recall, f1))
 
         if phase == 'valid' and best_val_acc < epoch_acc:
             best_val_acc = epoch_acc
-            print("Saving best model...")
+            logger.info("Saving best model...")
             if not os.path.exists(model_save_dir):
                 os.makedirs(model_save_dir)
             torch.save({
@@ -189,7 +191,7 @@ def train(model, dataloaders, criterion, optimizer, num_epochs,  model_save_dir,
                         },os.path.join(model_save_dir, "best.pkl"))
 
         if epoch % interval == 0:
-            print("Saving model...")
+            logger.info("Saving model...")
             if not os.path.exists(model_save_dir):
                 os.makedirs(model_save_dir)
             torch.save({
@@ -200,7 +202,7 @@ def train(model, dataloaders, criterion, optimizer, num_epochs,  model_save_dir,
                         },os.path.join(model_save_dir, f"Epoch-{epoch}.pkl"))
 
     time_elapsed = time.time() - since
-    print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+    logger.info('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
 
 
 def set_parameter_requires_grad(model, feature_extract):
@@ -280,12 +282,32 @@ def initialize_model(model_name, num_classes, feature_extract=False, use_pretrai
         input_size = 299
 
     else:
-        print("Invalid model name, exiting...")
+        logger.warning("Invalid model name, exiting...")
         exit()
     
     return model_ft, input_size
 
 
+def init_logger(log_path, modname=__name__):
+    logger = getLogger('log')
+    logger.setLevel(DEBUG)
+
+    sh = StreamHandler()
+    sh_formatter = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    sh.setFormatter(sh_formatter)
+    logger.addHandler(sh)
+
+    fh = FileHandler(log_path)
+    fh.setLevel(INFO)
+    fh_formatter = Formatter('%(asctime)s - %(filename)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s')
+    fh.setFormatter(fh_formatter)
+    logger.addHandler(fh)
+    
+    return logger
+
 if __name__ == '__main__':
     args = parse_args()
-    main(args)
+    if not os.path.exists(args.log):
+        os.makedirs(args.log)
+    logger = init_logger(f"{args.log}/result.log")
+    main(args, logger)
