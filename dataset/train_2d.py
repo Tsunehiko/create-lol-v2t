@@ -85,8 +85,8 @@ def main(args):
         for name,param in model.named_parameters():
             if param.requires_grad == True:
                 print("\t", name)
-    # optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.9)
-    optimizer = optim.Adam(params_to_update, lr=0.001, weight_decay=0)
+    optimizer = optim.SGD(params_to_update, lr=0.001, momentum=0.7)
+    # optimizer = optim.Adam(params_to_update, lr=0.001, weight_decay=0)
 
     start_epoch = 0
     model_save_dir = os.path.join(args.log, 'models')
@@ -124,6 +124,10 @@ def train(model, dataloaders, criterion, optimizer, num_epochs,  model_save_dir,
 
             running_loss = 0.0
             running_corrects = 0
+            tp = 0
+            tn = 0
+            fp = 0
+            fn = 0
 
             for inputs, labels, vnames in dataloaders[phase]:
                 inputs = inputs.to(device)
@@ -143,22 +147,34 @@ def train(model, dataloaders, criterion, optimizer, num_epochs,  model_save_dir,
                         labels = labels.type_as(outputs)
                         loss = criterion(outputs.view(-1), labels)
                     
-                    probs = torch.sigmoid(outputs.view(-1)) > 0.5
+                    preds = torch.sigmoid(outputs.view(-1)) > 0.5
 
                     if phase == 'train':
                         loss.backward()
                         optimizer.step()
 
                 running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(probs == labels.data)
+                running_corrects += torch.sum(preds.data == labels.data)
+                tp += torch.sum(preds.data == 1 and labels.data == 1)
+                tn += torch.sum(preds.data == 0 and labels.data == 1)
+                fp += torch.sum(preds.data == 1 and labels.data == 0)
+                fn += torch.sum(preds.data == 0 and labels.data == 0)
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
+            precision = tp.double() / (tp.double() + fp.double())
+            recall = tp.double() / (tp.double() + fn.double())
+            f1 = 2 * tp.double() / (2 * tp.double() + fp + fn)
+
 
             writers[phase].add_scalar("loss", epoch_loss, epoch)
             writers[phase].add_scalar("accuracy", epoch_acc, epoch)
+            writers[phase].add_scalar("precision", precision, epoch)
+            writers[phase].add_scalar("recall", recall, epoch)
+            writers[phase].add_scalar("f1_score", f1, epoch)
 
-            print("{} Loss: {:.7f} Acc:{:.7f}".format(phase, epoch_loss, epoch_acc))
+            print("{} Loss: {:.7f} Acc:{:.7f} Precision:{:.7f} Recall:{:.7f} F1:{:.7f}"
+                    .format(phase, epoch_loss, epoch_acc, precision, recall, f1))
 
         if phase == 'valid' and best_val_acc < epoch_acc:
             best_val_acc = epoch_acc
@@ -206,10 +222,10 @@ def initialize_model(model_name, num_classes, feature_extract=False, use_pretrai
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
         input_size = 224
 
-    elif model_name == 'resnet152':
-        """ Resnet152
+    elif model_name == 'resnet101':
+        """ Resnet101
         """
-        model_ft = models.resnet152(pretrained=use_pretrained)
+        model_ft = models.resnet101(pretrained=use_pretrained)
         set_parameter_requires_grad(model_ft, feature_extract)
         num_ftrs = model_ft.fc.in_features
         model_ft.fc = nn.Linear(num_ftrs, num_classes)
