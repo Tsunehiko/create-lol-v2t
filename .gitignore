@@ -7,7 +7,10 @@ dataset/frame
 dataset/test_data
 log
 __pycache__
-log
+*.log
 .python-version
 label.csv
 2D
+*.pt
+*.pkl
+*.png
