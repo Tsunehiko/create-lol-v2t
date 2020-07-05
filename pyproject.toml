@@ -16,6 +16,9 @@ numpy = "1.16.4"
 tensorboardx = "^2.0"
 tensorboard = "2.1.0"
 pygments = "^2.6.1"
+optuna = "^1.5.0"
+plotly = "^4.8.2"
+matplotlib = "^3.2.2"
 
 [tool.poetry.dev-dependencies]
 
