@@ -11,3 +11,9 @@ C3Dモデルを使った識別モデルの教師あり学習を行った。valid
 2Dモデルのfinetuningを行った。resnet18で試すところから始めていたが、accuracyの値が常に一定になってしまい、正確な値をとることができていなかった。accuracyの計算をnn.Sigmoid()を使う手法からtorch.sigmoid()を使う手法に変えることで、正常な値の取得に成功した。resnet18, resnet101, vgg11, squeezenet, resnext50_32x4dで試した。精度はどれも96%前後(squeezenetのみ92%程度)であり、optimizerを変えても精度にほとんど変化はなかった。
 * Video Captioningの関連研究を調査した <br>
 読んだ方が良さそうな論文をリストアップした。主にCVPR2016-2020, ICCV2018, ECCV2018あたりから。まだ読んでいない。
+
+##### 0625~0701
+* 2Dモデルのfinetuningの続きを行った <br>
+前回最も性能が高かったresnext50_32x4dについてPresicion/Recall Curveを作成し、thresholdの最適地を探した。Precisionを重視してもthresholdはだいたい0.5~0.6の間くらいが最も良い。また、OptimizerはSGD(lr=0.002, momentum=0.7)あたりが良さそう。
+* Video Captioningの関連研究 <br>
+Deep Compositional Captioning:Describing Novel Object Categories without Paired Training Dataを読んだ。
