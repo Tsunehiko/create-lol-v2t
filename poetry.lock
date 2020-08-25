@@ -39,6 +39,14 @@ tests = ["coverage", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.i
 
 [[package]]
 category = "main"
+description = "Pythonic bindings for FFmpeg's libraries."
+name = "av"
+optional = false
+python-versions = "*"
+version = "8.0.2"
+
+[[package]]
+category = "main"
 description = "Extensible memoizing collections and decorators"
 name = "cachetools"
 optional = false
@@ -153,6 +161,25 @@ version = "0.10.0"
 
 [package.dependencies]
 six = "*"
+
+[[package]]
+category = "main"
+description = "Decord Video Loader"
+name = "decord"
+optional = false
+python-versions = "*"
+version = "0.4.0"
+
+[package.dependencies]
+numpy = ">=1.14.0"
+
+[[package]]
+category = "main"
+description = "Pythonic argument parser, that will make you smile"
+name = "docopt"
+optional = false
+python-versions = "*"
+version = "0.6.2"
 
 [[package]]
 category = "main"
@@ -489,6 +516,17 @@ version = "1.0.4"
 
 [[package]]
 category = "main"
+description = "A Python wrapper of libjpeg-turbo for decoding and encoding JPEG image."
+name = "pyturbojpeg"
+optional = false
+python-versions = "*"
+version = "1.4.1"
+
+[package.dependencies]
+numpy = "*"
+
+[[package]]
+category = "main"
 description = "World timezone definitions, modern and historical"
 name = "pytz"
 optional = false
@@ -685,6 +723,14 @@ version = "2.1.0"
 
 [[package]]
 category = "main"
+description = "SMPTE Time Code Manipulation Library"
+name = "timecode"
+optional = false
+python-versions = "*"
+version = "1.2.0"
+
+[[package]]
+category = "main"
 description = "Fast, Extensible Progress Meter"
 name = "tqdm"
 optional = false
@@ -714,6 +760,17 @@ name = "wcwidth"
 optional = false
 python-versions = "*"
 version = "0.2.5"
+
+[[package]]
+category = "main"
+description = "WebVTT reader, writer and segmenter"
+name = "webvtt-py"
+optional = false
+python-versions = ">=3.4"
+version = "0.4.5"
+
+[package.dependencies]
+docopt = "*"
 
 [[package]]
 category = "main"
@@ -753,8 +810,8 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["jaraco.itertools", "func-timeout"]
 
 [metadata]
-content-hash = "9d5b16ee664756eacd2e246d29c2378f58ed72b835d6f34a0a83b5001e3f2c28"
-python-versions = "3.6.9"
+content-hash = "00d891e4ab44d871c9851adf5228bd36708b21e79e64bcb58c6d8fa8b70bbe77"
+python-versions = "^3.6.9"
 
 [metadata.files]
 absl-py = [
@@ -766,6 +823,31 @@ alembic = [
 attrs = [
     {file = "attrs-19.3.0-py2.py3-none-any.whl", hash = "sha256:08a96c641c3a74e44eb59afb61a24f2cb9f4d7188748e76ba4bb5edfa3cb7d1c"},
     {file = "attrs-19.3.0.tar.gz", hash = "sha256:f7b7ce16570fe9965acd6d30101a28f62fb4a7f9e926b3bbc9b61f8b04247e72"},
+]
+av = [
+    {file = "av-8.0.2-cp35-cp35m-macosx_10_9_x86_64.whl", hash = "sha256:313a7142805cc6cb3992c3c16618871b10e608b5a7d496766771e1eee92ae4e6"},
+    {file = "av-8.0.2-cp35-cp35m-manylinux2010_i686.whl", hash = "sha256:07b342d96c7143819d84c2019a070266ea762949d08bb7f49024d73b12d14051"},
+    {file = "av-8.0.2-cp35-cp35m-manylinux2010_x86_64.whl", hash = "sha256:641d18c76bae1a038dfe35abf656edbb10743fe27fdc2b6552ffa2e0089c0a4f"},
+    {file = "av-8.0.2-cp35-cp35m-win32.whl", hash = "sha256:38745b15117cef944705a79549f683df023d5e0f1c8ff097f9c595193c035ea2"},
+    {file = "av-8.0.2-cp35-cp35m-win_amd64.whl", hash = "sha256:9c56087c9753d66536999a09c3afc35757ee6db021a1b232e5fc6c09ecce783a"},
+    {file = "av-8.0.2-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:3a21bf80804d2a494055d2ab204f126c5b1fe408dc9151bf1cbc4f1d0de608e6"},
+    {file = "av-8.0.2-cp36-cp36m-manylinux2010_i686.whl", hash = "sha256:41a5e2677cc729060c6ad53729df5ea8a6cdec35eb9b879d92c5935209be95ef"},
+    {file = "av-8.0.2-cp36-cp36m-manylinux2010_x86_64.whl", hash = "sha256:83e0856fe8c238b5fa612b0781b4a28fec5363daddae9181b449b5392a446802"},
+    {file = "av-8.0.2-cp36-cp36m-win32.whl", hash = "sha256:ff8d1c0f5fb16e3f8069f1be5648b415ef98c964a8db1aead1dce5ef2fedaa24"},
+    {file = "av-8.0.2-cp36-cp36m-win_amd64.whl", hash = "sha256:e85232e52ddf3c601deb9aacb5ff65818186c2ee88efa0ea65e45d98a9e64b4b"},
+    {file = "av-8.0.2-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:de8d8d138da02504afc7e1923fab772e6415becad3d23259186abfcc5b741458"},
+    {file = "av-8.0.2-cp37-cp37m-manylinux2010_i686.whl", hash = "sha256:fe103c741ee517f840f880f7f2c4863dec21a21403514ca2faeeba5b32798594"},
+    {file = "av-8.0.2-cp37-cp37m-manylinux2010_x86_64.whl", hash = "sha256:2d28400330572ca8491daf1ca747ceff96ab8b305a77c52bb1fbdf1f877a9837"},
+    {file = "av-8.0.2-cp37-cp37m-win32.whl", hash = "sha256:11496264d0696b115d60f191b437b3c13784c2d14dc00632ccc14905bfd32017"},
+    {file = "av-8.0.2-cp37-cp37m-win_amd64.whl", hash = "sha256:6c12c1f99c835e964c007f1ab921839a1b5ba2283259e7feb4d6f54b3fe817e0"},
+    {file = "av-8.0.2-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:619aeb9c1484dd69b2085da39128a16205a2c1581303310a7c826353461a9ab1"},
+    {file = "av-8.0.2-cp38-cp38-manylinux2010_i686.whl", hash = "sha256:3d1b7047be6bd7a0161ee928c0949f1398784bab6b2acd6113950a755abd03c3"},
+    {file = "av-8.0.2-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:a27ff4bf8db6a064a8ac12fc5a303ca801cef27babcf6f56290b073164d6ddbb"},
+    {file = "av-8.0.2-cp38-cp38-win32.whl", hash = "sha256:79b398f752ff31f89f9900659eda538210c14699719617b30bfb1cadc6558ec1"},
+    {file = "av-8.0.2-cp38-cp38-win_amd64.whl", hash = "sha256:49e7322fdcaa08fa1d43150eee96278f5b5d0e1542f3e0400affcdd11b6b75bc"},
+    {file = "av-8.0.2-pp36-pypy36_pp73-macosx_10_9_x86_64.whl", hash = "sha256:d37ca5c78d206394380e2d7e7b40631c0b7264a84b2494fdbfa867740af30480"},
+    {file = "av-8.0.2-pp36-pypy36_pp73-manylinux2010_x86_64.whl", hash = "sha256:3268eec526c5b2f22cde3e9c4615edf599e2e646792343634eeec226dc2605f5"},
+    {file = "av-8.0.2.tar.gz", hash = "sha256:a3bba6bf68766b8a1a057f28869c7078cf0a1ec3207c7788c2ce8fe6f6bd8267"},
 ]
 cachetools = [
     {file = "cachetools-4.1.0-py3-none-any.whl", hash = "sha256:de5d88f87781602201cde465d3afe837546663b168e8b39df67411b0bf10cefc"},
@@ -806,6 +888,15 @@ colorlog = [
 cycler = [
     {file = "cycler-0.10.0-py2.py3-none-any.whl", hash = "sha256:1d8a5ae1ff6c5cf9b93e8811e581232ad8920aeec647c37316ceac982b08cb2d"},
     {file = "cycler-0.10.0.tar.gz", hash = "sha256:cd7b2d1018258d7247a71425e9f26463dfb444d411c39569972f4ce586b0c9d8"},
+]
+decord = [
+    {file = "decord-0.4.0-cp36-cp36m-macosx_10_13_x86_64.whl", hash = "sha256:46fe1783905e1953c9f015e80f3fef6d216a08f9f9813d963a20296a47f11441"},
+    {file = "decord-0.4.0-cp37-cp37m-macosx_10_13_x86_64.whl", hash = "sha256:610ecf26fa560b45cd87a1fca7c0cd57fa53abfc96c736eeaec30cd67496e169"},
+    {file = "decord-0.4.0-py2.py3-none-manylinux1_x86_64.whl", hash = "sha256:113329c6074e46f423a0fc086d0c5f4d4f75881fe4eb7c64c4cd0623c76e6628"},
+    {file = "decord-0.4.0-py2.py3-none-win_amd64.whl", hash = "sha256:42ec7a42d1bd3631fe77e034523e5006b893102a271426a46e481a3fd84f44fb"},
+]
+docopt = [
+    {file = "docopt-0.6.2.tar.gz", hash = "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491"},
 ]
 future = [
     {file = "future-0.18.2.tar.gz", hash = "sha256:b1bead90b70cf6ec3f0710ae53a525360fa360d306a86583adc6bf83a4db537d"},
@@ -1104,6 +1195,9 @@ python-editor = [
     {file = "python_editor-1.0.4-py3-none-any.whl", hash = "sha256:1bf6e860a8ad52a14c3ee1252d5dc25b2030618ed80c022598f00176adc8367d"},
     {file = "python_editor-1.0.4-py3.5.egg", hash = "sha256:c3da2053dbab6b29c94e43c486ff67206eafbe7eb52dbec7390b5e2fb05aac77"},
 ]
+pyturbojpeg = [
+    {file = "PyTurboJPEG-1.4.1.tar.gz", hash = "sha256:09688a93331281e566569b4d313e1d1a058ca32ccae1a2473847a10e4ca2f2a7"},
+]
 pytz = [
     {file = "pytz-2020.1-py2.py3-none-any.whl", hash = "sha256:a494d53b6d39c3c6e44c3bec237336e14305e4f29bbf800b599253057fbb79ed"},
     {file = "pytz-2020.1.tar.gz", hash = "sha256:c35965d010ce31b23eeb663ed3cc8c906275d6be1a34393a1d73a41febf4a048"},
@@ -1230,6 +1324,10 @@ threadpoolctl = [
     {file = "threadpoolctl-2.1.0-py3-none-any.whl", hash = "sha256:38b74ca20ff3bb42caca8b00055111d74159ee95c4370882bbff2b93d24da725"},
     {file = "threadpoolctl-2.1.0.tar.gz", hash = "sha256:ddc57c96a38beb63db45d6c159b5ab07b6bced12c45a1f07b2b92f272aebfa6b"},
 ]
+timecode = [
+    {file = "timecode-1.2.0-py2.py3-none-any.whl", hash = "sha256:c4a6309ca3bde9549ee8ece0c1f6395fbb851492c01376f9b3743537097816ac"},
+    {file = "timecode-1.2.0.tar.gz", hash = "sha256:7b2db29bdcb358716c557f28622cb00fb09850206776b6ef53c6a5a36786e036"},
+]
 tqdm = [
     {file = "tqdm-4.46.1-py2.py3-none-any.whl", hash = "sha256:07c06493f1403c1380b630ae3dcbe5ae62abcf369a93bbc052502279f189ab8c"},
     {file = "tqdm-4.46.1.tar.gz", hash = "sha256:cd140979c2bebd2311dfb14781d8f19bd5a9debb92dcab9f6ef899c987fcf71f"},
@@ -1241,6 +1339,9 @@ urllib3 = [
 wcwidth = [
     {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},
     {file = "wcwidth-0.2.5.tar.gz", hash = "sha256:c4d647b99872929fdb7bdcaa4fbe7f01413ed3d98077df798530e5b04f116c83"},
+]
+webvtt-py = [
+    {file = "webvtt_py-0.4.5-py3-none-any.whl", hash = "sha256:a953540f1886e4ef2e5a973d7d22a4f3e67c7f8a931cd5fa55a371efb5f8aeb2"},
 ]
 werkzeug = [
     {file = "Werkzeug-1.0.1-py2.py3-none-any.whl", hash = "sha256:2de2a5db0baeae7b2d2664949077c2ac63fbd16d98da0ff71837f7d1dea3fd43"},

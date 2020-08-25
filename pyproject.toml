@@ -5,7 +5,7 @@ description = ""
 authors = ["Tanaka <tsunehiko@fuji.waseda.jp>"]
 
 [tool.poetry.dependencies]
-python = "3.6.9"
+python = "^3.6.9"
 future = "^0.18.2"
 Click = "^7.1.2"
 tqdm = "^4.46.1"
@@ -19,6 +19,11 @@ pygments = "^2.6.1"
 optuna = "^1.5.0"
 plotly = "^4.8.2"
 matplotlib = "^3.2.2"
+webvtt-py = "^0.4.5"
+timecode = "^1.2.0"
+av = "^8.0.2"
+decord = "^0.4.0"
+PyTurboJPEG = "^1.4.1"
 
 [tool.poetry.dev-dependencies]
 

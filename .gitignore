@@ -1,10 +1,10 @@
 data
 exp
-dataset/stats
-dataset/videos
-dataset/label
-dataset/frame
-dataset/test_data
+making_dataset/stats
+making_dataset/videos
+making_dataset/label
+making_dataset/frame
+making_dataset/test_data
 log
 __pycache__
 *.log
@@ -14,3 +14,4 @@ label.csv
 *.pt
 *.pkl
 *.png
+caption/temp
