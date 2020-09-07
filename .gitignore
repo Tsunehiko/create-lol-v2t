@@ -14,4 +14,4 @@ label.csv
 *.pt
 *.pkl
 *.png
-caption/temp
+caption/tmp
