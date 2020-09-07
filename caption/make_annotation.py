@@ -1,12 +1,15 @@
 import argparse
 import shutil
 import json
+import csv
 import os
+import re
 import pickle
+import datetime
 
 import cv2
 import webvtt
-# from timecode import Timecode
+from timecode import Timecode
 
 from divide import divide_video
 from remove_unused_video import classify
@@ -26,22 +29,25 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(args, logger):
+def main(args, logger, date):
 
-    video_names = sorted(os.listdir(args.video_dir))
-    caption_names = sorted(os.listdir(args.caption_dir))
+    video_names = sorted([re.search(r"(.*)\.mp4", file_name).group(1) for file_name in os.listdir(args.video_dir)])
     all_clips_num = 0
     all_duration_num = 0
     all_sentences_num = 0
     all_words_num = 0
     for i, video in enumerate(video_names):
         logger.info(f"video:{video}")
-        video_path = os.path.join(args.video_dir, video)
-        caption_path = os.path.join(args.caption_dir, caption_names[i])
-        video_elements_dir_path = os.path.join(args.divided_video_dir, video)
-        timecode_list = divide_video(video_path, video, video_elements_dir_path, args.pyscenedetect_threshold)
+        video_name = video + ".mp4"
+        video_path = os.path.join(args.video_dir, video_name)
+        caption_path = os.path.join(args.caption_dir, (video + ".en.vtt"))
+        annotation_dir = os.path.join(args.annotation_dir, date)
+        if not os.path.exists(annotation_dir):
+            os.makedirs(annotation_dir)
+        video_elements_dir_path = os.path.join(args.divided_video_dir, date, video_name)
+        timecode_list = divide_video(video_path, video_name, video_elements_dir_path, args.pyscenedetect_threshold)
         
-        trash_dir_path = os.path.join("./temp/trash")
+        trash_dir_path = os.path.join("./tmp/trash")
         if not os.path.exists(trash_dir_path):
             os.makedirs(trash_dir_path)
 
@@ -54,23 +60,27 @@ def main(args, logger):
         if i == 0:
             annotation_list = []
         else:
-            annotation_list = load_pickle(os.path.join(args.annotation_dir, "annotation.pkl"))
+            annotation_list = load_pickle(os.path.join(args.annotation_dir, date, "annotation.pkl"))
 
         video_element_names = sorted(os.listdir(video_elements_dir_path))
         for i, video_element in enumerate(video_element_names):
             video_element_path = os.path.join(video_elements_dir_path, video_element)
-            is_useful = classify(video_elements_dir_path, video_element, os.path.join(args.frame_dir, video, video_element))
+            is_useful = classify(video_elements_dir_path, video_element, os.path.join(args.frame_dir, video_name, video_element))
             
             if is_useful:
                 capture = cv2.VideoCapture(video_element_path)
                 fps = capture.get(cv2.CAP_PROP_FPS)
                 frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
                 duration = frame_count / fps
-                annotation_data, sentences, words = make_caption_data(video_element, caption_path, timecode_list[i], duration)
+                annotation_data, sentences, words = make_caption_data(video_element, caption_path, timecode_list[i], duration, fps)
                 annotation_list.append(annotation_data)
-                save_pickle(annotation_list, os.path.join(args.annotation_dir, "annotation.pkl"))
-                with open(os.path.join(args.annotation_dir, "annotation.txt"), 'a') as f:
+                save_pickle(annotation_list, os.path.join(args.annotation_dir, date, "annotation.pkl"))
+                with open(os.path.join(args.annotation_dir, date, "annotation.txt"), 'a') as f:
                     print(annotation_data, file=f)
+                with open(os.path.join(args.annotation_dir, date, "duration_frame.csv"), 'a') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([video_element, duration, frame_count])
+                
 
                 clips_num += 1
                 duration_num += duration
@@ -98,12 +108,12 @@ def main(args, logger):
     logger.info(f"duration:{all_duration_num} ave_duration:{all_duration_num/all_clips_num}")
     logger.info(f"sentences:{all_sentences_num} ave_sentences:{all_sentences_num/all_clips_num}")
     logger.info(f"words:{all_words_num} ave_words:{all_words_num/all_clips_num}")
-    annotation_list = load_pickle(os.path.join(args.annotation_dir, "annotation.pkl"))
-    with open(os.path.join(args.annotation_dir, 'annotation.json'), 'w') as f:
-        json.dump(annotation_list, f)
+    all_annotation_list = load_pickle(os.path.join(args.annotation_dir, date, "annotation.pkl"))
+    with open(os.path.join(args.annotation_dir, date, 'annotation.json'), 'w') as f:
+        json.dump(all_annotation_list, f)
 
 
-def make_caption_data(video_element_name, caption_path, timecodes, duration):
+def make_caption_data(video_element_name, caption_path, timecodes, duration, fps):
     start, end = timecodes
     sentences = []
     timestamps = []
@@ -112,7 +122,11 @@ def make_caption_data(video_element_name, caption_path, timecodes, duration):
     for i, caption in enumerate(webvtt.read(caption_path)):
         if i != 0 and len(caption.text.strip().splitlines()) == 1 and caption.text.strip() != beforeCaption and caption.start > start and caption.end < end:
             sentences.append(caption.text.strip())
-            timestamp = [caption.start, caption.end]
+            start_cap = Timecode(fps, caption.start)
+            start_sec = start_cap.hrs * 3600 + start_cap.mins * 60 + start_cap.secs + start_cap.frs
+            end_cap = Timecode(fps, caption.end)
+            end_sec = end_cap.hrs * 3600 + end_cap.mins * 60 + end_cap.secs + end_cap.frs
+            timestamp = [start_sec, end_sec]
             timestamps.append(timestamp)
             beforeCaption = caption.text.strip()
             words_num += len(beforeCaption.split())
@@ -131,7 +145,10 @@ def load_pickle(file):
     return data
     
 
-def init_logger(log_path, modname=__name__):
+def init_logger(log_dir, modname=__name__):
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    log_path = os.path.join(log_dir, "result.log")
     logger = getLogger('log')
     logger.setLevel(DEBUG)
 
@@ -153,5 +170,6 @@ if __name__ == '__main__':
     args = parse_args()
     if not os.path.exists(args.log):
         os.makedirs(args.log)
-    logger = init_logger(f"{args.log}/result.log")
-    main(args, logger)
+    date = str(datetime.date.today())
+    logger = init_logger(os.path.join(args.log, date))
+    main(args, logger, date)

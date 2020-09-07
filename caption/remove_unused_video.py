@@ -27,7 +27,7 @@ def classify(video_dir_path, video_name, frame_dir_path, threshold=0.5):
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, 1)
     model = model.to(device)
-    checkpoint = torch.load(model_save_path)
+    checkpoint = torch.load(model_save_path, map_location='cpu')
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     input_size = 224
@@ -39,7 +39,7 @@ def classify(video_dir_path, video_name, frame_dir_path, threshold=0.5):
     inputs = inputs.to(device)
     outputs = model(inputs)
     preds = torch.sigmoid(outputs.view(-1)) > threshold
-    print(f"{video_name} : {preds}")
+    # print(f"{video_name} : {preds}")
 
     return preds
 

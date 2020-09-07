@@ -37,7 +37,7 @@ def divide_video(video_path, video_name, save_dir_path, threshold):
 
     # Add ContentDetector algorithm (each detector's constructor
     # takes detector options, e.g. threshold).
-    scene_manager.add_detector(ContentDetector(threshold=threshold))
+    scene_manager.add_detector(ContentDetector(threshold=threshold, min_scene_len=180))
     base_timecode = video_manager.get_base_timecode()
 
     # We save our stats file to {VIDEO_PATH}.stats.csv.
