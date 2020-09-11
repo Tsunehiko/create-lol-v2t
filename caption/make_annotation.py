@@ -58,9 +58,9 @@ def main(args, logger, date):
         use_list = []
         unuse_list = []
         if i == 0:
-            annotation_list = []
+            annotation_dict = {}
         else:
-            annotation_list = load_pickle(os.path.join(args.annotation_dir, date, "annotation.pkl"))
+            annotation_dict = load_pickle(os.path.join(args.annotation_dir, date, "annotation.pkl"))
 
         video_element_names = sorted(os.listdir(video_elements_dir_path))
         for i, video_element in enumerate(video_element_names):
@@ -73,8 +73,8 @@ def main(args, logger, date):
                 frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
                 duration = frame_count / fps
                 annotation_data, sentences, words = make_caption_data(video_element, caption_path, timecode_list[i], duration, fps)
-                annotation_list.append(annotation_data)
-                save_pickle(annotation_list, os.path.join(args.annotation_dir, date, "annotation.pkl"))
+                annotation_dict.update(annotation_data)
+                save_pickle(annotation_dict, os.path.join(args.annotation_dir, date, "annotation.pkl"))
                 with open(os.path.join(args.annotation_dir, date, "annotation.txt"), 'a') as f:
                     print(annotation_data, file=f)
                 with open(os.path.join(args.annotation_dir, date, "duration_frame.csv"), 'a') as f:
@@ -108,30 +108,36 @@ def main(args, logger, date):
     logger.info(f"duration:{all_duration_num} ave_duration:{all_duration_num/all_clips_num}")
     logger.info(f"sentences:{all_sentences_num} ave_sentences:{all_sentences_num/all_clips_num}")
     logger.info(f"words:{all_words_num} ave_words:{all_words_num/all_clips_num}")
-    all_annotation_list = load_pickle(os.path.join(args.annotation_dir, date, "annotation.pkl"))
+    all_annotation_dict = load_pickle(os.path.join(args.annotation_dir, date, "annotation.pkl"))
     with open(os.path.join(args.annotation_dir, date, 'annotation.json'), 'w') as f:
-        json.dump(all_annotation_list, f)
+        json.dump(all_annotation_dict, f)
 
 
 def make_caption_data(video_element_name, caption_path, timecodes, duration, fps):
-    start, end = timecodes
+    # 動画の最初と最後
+    start, end = Timecode(fps, timecodes[0]), Timecode(fps, timecodes[1])
+    start_sec = timecode_to_sec(start)
+
     sentences = []
     timestamps = []
-    beforeCaption = ""
     words_num = 0
-    for i, caption in enumerate(webvtt.read(caption_path)):
-        if i != 0 and len(caption.text.strip().splitlines()) == 1 and caption.text.strip() != beforeCaption and caption.start > start and caption.end < end:
-            sentences.append(caption.text.strip())
-            start_cap = Timecode(fps, caption.start)
-            start_sec = start_cap.hrs * 3600 + start_cap.mins * 60 + start_cap.secs + start_cap.frs
-            end_cap = Timecode(fps, caption.end)
-            end_sec = end_cap.hrs * 3600 + end_cap.mins * 60 + end_cap.secs + end_cap.frs
-            timestamp = [start_sec, end_sec]
-            timestamps.append(timestamp)
-            beforeCaption = caption.text.strip()
-            words_num += len(beforeCaption.split())
-    annotation = (video_element_name, {'duration':duration, 'sentences':sentences, 'timestamps':timestamps})
+    captions = webvtt.read(caption_path)
+    last = len(captions)
+    start_cap = timecode_to_sec(Timecode(fps, captions[0].start))
+    for i, caption in enumerate(captions):
+        if caption.start > start and caption.end < end and i % 2 == 0:
+            start_cap = timecode_to_sec(Timecode(fps, captions[i-1].start))
+            end_cap = timecode_to_sec(Timecode(fps, caption.end))
+            sentence = caption.text.strip().splitlines()[0]
+            sentences.append(sentence)
+            timestamps.append([start_cap - start_sec, end_cap - start_sec])
+            words_num += len(sentence.split())
+    annotation = {video_element_name: {'duration':duration, 'timestamps':timestamps, 'sentences':sentences}}
     return annotation, len(sentences), words_num
+
+
+def timecode_to_sec(timecode):
+    return timecode.hrs * 3600 + timecode.mins * 60 + timecode.secs + timecode.frs
 
 
 def save_pickle(obj, file):

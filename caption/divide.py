@@ -71,7 +71,7 @@ def divide_video(video_path, video_name, save_dir_path, threshold):
     if not os.path.exists(save_dir_path):
         os.makedirs(save_dir_path)
 
-    split_video_ffmpeg([video_path], scene_list, os.path.join(save_dir_path,"${VIDEO_NAME}-${SCENE_NUMBER}.mp4"), video_name)
+    split_video_ffmpeg([video_path], scene_list, os.path.join(save_dir_path,"${VIDEO_NAME}-${SCENE_NUMBER}.mp4"), video_name[:-4])
 
     timecode_list = []
     for scene in scene_list:
