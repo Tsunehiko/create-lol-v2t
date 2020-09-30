@@ -15,3 +15,7 @@ label.csv
 *.pkl
 *.png
 caption/tmp
+duration_frame.csv
+dataset/training
+dataset/testing
+dataset/validation
