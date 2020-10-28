@@ -1,5 +1,8 @@
 import os
 import csv
+os.environ["MKL_NUM_THREADS"] = "1" 
+os.environ["NUMEXPR_NUM_THREADS"] = "1" 
+os.environ["OMP_NUM_THREADS"] = "1" 
 
 # Standard PySceneDetect imports:
 from scenedetect.video_manager import VideoManager
@@ -71,7 +74,7 @@ def divide_video(video_path, video_name, save_dir_path, threshold):
     if not os.path.exists(save_dir_path):
         os.makedirs(save_dir_path)
 
-    split_video_ffmpeg([video_path], scene_list, os.path.join(save_dir_path,"${VIDEO_NAME}-${SCENE_NUMBER}.mp4"), video_name[:-4])
+    split_video_ffmpeg([video_path], scene_list, os.path.join(save_dir_path,"${VIDEO_NAME}-${SCENE_NUMBER}.mp4"), video_name[:-4], arg_override='-threads 0 -c:v libx264 -preset fast -crf 21 -c:a aac')
 
     timecode_list = []
     for scene in scene_list:

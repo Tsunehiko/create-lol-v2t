@@ -13,7 +13,6 @@ pandas = "^1.0.4"
 sklearn = "^0.0"
 numpy = "1.16.4"
 tensorboardx = "^2.0"
-tensorboard = "2.1.0"
 pygments = "^2.6.1"
 optuna = "^1.5.0"
 plotly = "^4.8.2"
@@ -26,9 +25,14 @@ torch = "^1.6.0"
 torchvision = "^0.7.0"
 scenedetect = "^0.5.3"
 opencv-python = "^4.4.0"
+deepsegment = "^2.3.1"
+tensorflow = "^2.3.1"
+fastpunct = "^1.0.2"
+nltk = "^3.5"
 
 [tool.poetry.dev-dependencies]
 autopep8 = "^1.5.4"
+flake8 = "^3.8.4"
 
 [build-system]
 requires = ["poetry>=0.12"]
