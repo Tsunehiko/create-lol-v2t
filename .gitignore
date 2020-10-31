@@ -1,10 +1,10 @@
 data
 exp
-making_dataset/stats
-making_dataset/videos
-making_dataset/label
-making_dataset/frame
-making_dataset/test_data
+is_useful/stats
+is_useful/videos
+is_useful/label
+is_useful/frame
+is_useful/test_data
 log
 __pycache__
 *.log
