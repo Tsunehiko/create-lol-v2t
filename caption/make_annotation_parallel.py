@@ -1,5 +1,4 @@
 import argparse
-from os import times
 import shutil
 import json
 import csv
@@ -7,6 +6,7 @@ import os
 import re
 import pickle
 import datetime
+import multiprocessing
 
 import cv2
 import webvtt
@@ -30,6 +30,7 @@ def parse_args():
     parser.add_argument('--timecode-dir', type=str, help='path to timecode pkl directory')
     parser.add_argument('--pyscenedetect-threshold', type=int, default=20, help='pyscenedetect threshold')
     parser.add_argument('--log', type=str, help='path to log')
+    parser.add_argument('--threads', type=int, help='num of threads')
     return parser.parse_args()
 
 
@@ -40,67 +41,34 @@ def main(args, logger, date):
     all_duration_num = 0
     all_sentences_num = 0
     all_words_num = 0
-    for i, video in enumerate(video_names):
+    all_annotation_dict = {}
+
+    annotation_dir = os.path.join(args.annotation_dir, date)
+    if not os.path.isdir(annotation_dir):
+        os.makedirs(annotation_dir)
+
+    trash_dir_path = os.path.join("./tmp/trash/parallel")
+    if not os.path.isdir(trash_dir_path):
+        os.makedirs(trash_dir_path)
+
+    timecode_dir = os.path.join(args.timecode_dir, date)
+    if not os.path.isdir(timecode_dir):
+        os.makedirs(timecode_dir)
+
+    threads_num = min(multiprocessing.cpu_count(), args.threads, len(video_names))
+
+    # video_names_threads = [video_names[idx:idx + threads_num] for idx in range(0, len(video_names), threads_num)]
+
+    results = []
+
+    args_video_names = [(args, date, trash_dir_path, timecode_dir, video) for video in video_names]
+
+    with multiprocessing.Pool(threads_num) as pool:
+        results = pool.map(divide_caption_wrapper, args_video_names)
+
+    for result in results:
+        video, annotation_dict, clips_num, duration_num, sentences_num, words_num, use_list, unuse_list = result
         logger.info(f"video:{video}")
-        video_name = video + ".mp4"
-        video_path = os.path.join(args.video_dir, video_name)
-        caption_path = os.path.join(args.caption_dir, (video + ".en.vtt"))
-        annotation_dir = os.path.join(args.annotation_dir, date)
-        if not os.path.exists(annotation_dir):
-            os.makedirs(annotation_dir)
-        video_elements_dir_path = os.path.join(args.divided_video_dir, date, video_name)
-        timecode_list = divide_video(video_path, video_name, video_elements_dir_path, args.pyscenedetect_threshold)
-        timecode_dir = os.path.join(args.timecode_dir, date)
-        if not os.path.exists(timecode_dir):
-            os.makedirs(timecode_dir)
-        save_pickle(timecode_list, os.path.join(timecode_dir, video + ".pkl"))
-        
-        trash_dir_path = os.path.join("./tmp/test/trash/series")
-        if not os.path.exists(trash_dir_path):
-            os.makedirs(trash_dir_path)
-
-        clips_num = 0
-        duration_num = 0
-        sentences_num = 0
-        words_num = 0
-        use_list = []
-        unuse_list = []
-        if i == 0:
-            annotation_dict = {}
-        else:
-            annotation_dict = load_pickle(os.path.join(args.annotation_dir, date, "annotation.pkl"))
-
-        video_element_names = sorted(os.listdir(video_elements_dir_path))
-        fastpunct = FastPunct('en')
-        for i, video_element in enumerate(video_element_names):
-            video_element_path = os.path.join(video_elements_dir_path, video_element)
-            is_useful = classify(video_elements_dir_path,
-                                 video_element, 
-                                 os.path.join(os.path.join(args.frame_dir, "series"), video_name, video_element))
-            
-            if is_useful:
-                capture = cv2.VideoCapture(video_element_path)
-                fps = capture.get(cv2.CAP_PROP_FPS)
-                frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-                duration = frame_count / fps
-                annotation_data, sentences, words = make_caption_data(video_element[:-4], caption_path, timecode_list[i], duration, fps, fastpunct)
-                annotation_dict.update(annotation_data)
-                save_pickle(annotation_dict, os.path.join(args.annotation_dir, date, "annotation.pkl"))
-                with open(os.path.join(args.annotation_dir, date, "annotation.txt"), 'a') as f:
-                    print(annotation_data, file=f)
-                with open(os.path.join(args.annotation_dir, date, "duration_frame.csv"), 'a') as f:
-                    writer = csv.writer(f)
-                    writer.writerow([video_element, duration, frame_count])
-                
-                clips_num += 1
-                duration_num += duration
-                sentences_num += sentences
-                words_num += words
-                use_list.append(i)
-            else:
-                shutil.move(video_element_path, trash_dir_path)
-                unuse_list.append(i)
-
         logger.info(f"clips:{clips_num}")
         logger.info(f"use  :{use_list}")
         logger.info(f"unuse:{unuse_list}")
@@ -108,19 +76,71 @@ def main(args, logger, date):
         logger.info(f"sentences:{sentences_num} ave_sentences:{sentences_num/clips_num}")
         logger.info(f"words:{words_num} ave_words:{words_num/clips_num}")
 
+        with open(os.path.join(args.annotation_dir, date, "annotation.txt"), 'a') as f:
+            print(annotation_dict, file=f)
         all_clips_num += clips_num
         all_duration_num += duration_num
         all_sentences_num += sentences_num
         all_words_num += words_num
+        all_annotation_dict.update(annotation_dict)
 
     logger.info("Entire data")
     logger.info(f"clips:{all_clips_num} ave_clips:{all_clips_num/len(video_names)}")
     logger.info(f"duration:{all_duration_num} ave_duration:{all_duration_num/all_clips_num}")
     logger.info(f"sentences:{all_sentences_num} ave_sentences:{all_sentences_num/all_clips_num}")
     logger.info(f"words:{all_words_num} ave_words:{all_words_num/all_clips_num}")
-    all_annotation_dict = load_pickle(os.path.join(args.annotation_dir, date, "annotation.pkl"))
     with open(os.path.join(args.annotation_dir, date, 'annotation.json'), 'w') as f:
         json.dump(all_annotation_dict, f)
+
+
+def divide_caption_wrapper(args):
+    return divide_caption(*args)
+
+
+def divide_caption(args, date, trash_dir_path, timecode_dir, video):
+    video_name = video + ".mp4"
+    video_path = os.path.join(args.video_dir, video_name)
+    caption_path = os.path.join(args.caption_dir, (video + ".en.vtt"))
+    video_elements_dir_path = os.path.join(args.divided_video_dir, date, video_name)
+    timecode_list = divide_video(video_path, video_name, video_elements_dir_path, args.pyscenedetect_threshold)
+    save_pickle(timecode_list, os.path.join(timecode_dir, video + ".pkl"))
+
+    clips_num = 0
+    duration_num = 0
+    sentences_num = 0
+    words_num = 0
+    use_list = []
+    unuse_list = []
+    annotation_dict = {}
+
+    video_element_names = sorted(os.listdir(video_elements_dir_path))
+    fastpunct = FastPunct('en')
+    for i, video_element in enumerate(video_element_names):
+        video_element_path = os.path.join(video_elements_dir_path, video_element)
+        is_useful = classify(video_elements_dir_path,
+                             video_element,
+                             os.path.join(os.path.join(args.frame_dir, "parallel"), video_name, video_element))
+        
+        if is_useful:
+            capture = cv2.VideoCapture(video_element_path)
+            fps = capture.get(cv2.CAP_PROP_FPS)
+            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+            duration = frame_count / fps
+            annotation_data, sentences, words = make_caption_data(video_element[:-4], caption_path, timecode_list[i], duration, fps, fastpunct)
+            annotation_dict.update(annotation_data)
+
+            clips_num += 1
+            duration_num += duration
+            sentences_num += sentences
+            words_num += words
+            use_list.append(i)
+        else:
+            shutil.move(video_element_path, trash_dir_path)
+            unuse_list.append(i)
+
+    print(f'{video} has been done.')
+
+    return (video, annotation_dict, clips_num, duration_num, sentences_num, words_num, use_list, unuse_list)
 
 
 def make_caption_data(video_element_name, caption_path, timecodes, duration, fps, fastpunct):
