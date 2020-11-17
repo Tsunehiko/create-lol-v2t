@@ -1,39 +1,33 @@
 import os
-import copy
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-import numpy as np
 import cv2
 from PIL import Image
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import torch.backends.cudnn as cudnn
 import numpy as np
-import torchvision
-from torchvision import datasets, models, transforms
+from torchvision import models, transforms
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device('cpu')
 
 
-def classify(video_dir_path, video_name, frame_dir_path, threshold=0.5):
-
-    model_save_path = "model/best.pkl"
+def classify(video_dir_path, video_name, frame_dir_path, classify_model, threshold=0.5):
 
     # load model
     model = models.resnext50_32x4d(pretrained=True)
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, 1)
     model = model.to(device)
-    checkpoint = torch.load(model_save_path, map_location='cpu')
+    checkpoint = torch.load(classify_model, map_location=device)
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     input_size = 224
 
     inputs = load_video_frame(video_dir_path, video_name, frame_dir_path, input_size)
-    inputs = inputs.view(1,3,input_size,input_size)
+    inputs = inputs.view(1, 3, input_size, input_size)
 
     # classify
     inputs = inputs.to(device)
