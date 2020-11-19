@@ -317,13 +317,12 @@ def segement_sentences(joined_sentence, punct='deepsegment'):
         while len(words) > 0:
             sentence = reduce(lambda a, b: a + ' ' + b, words[:40])
             segmented_sentences = segmenter.segment(sentence)
-            sentences.extend(segmented_sentences[:-1])
             if len(segmented_sentences) > 1:
+                sentences.extend(segmented_sentences[:-1])
                 words = str(segmented_sentences[-1]).strip().split() + words[40:]
             else:
+                sentences.extend(segmented_sentences)
                 words = words[40:]
-        if len(segmented_sentences) > 0:
-            sentences.append(segmented_sentences[-1])
     else:
         raise Exception('You have probably chosen something other than fastpunct and deepsegement.')
 
