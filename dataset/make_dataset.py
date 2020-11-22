@@ -65,67 +65,74 @@ def main(args, logger):
 
     video_index = 0
     for split in split_nums.keys():
-        logger.info(f"[{split}] making annotation has started.")
         split_videos = video_names[video_index: video_index + split_nums[split]]
         frame_dir = os.path.join(tmp_dir, 'frame', split)
         divided_video_dir = os.path.join(tmp_dir, 'divide', split)
         trash_dir = os.path.join(tmp_dir, 'trash', split)
         timecode_dir = os.path.join(tmp_dir, 'timecode', split)
-        if not os.path.exists(trash_dir):
-            os.makedirs(trash_dir)
-        if not os.path.exists(timecode_dir):
-            os.makedirs(timecode_dir)
-        results = []
-        args_make_annotation_list = [(args.video_dir,
-                                      args.caption_dir,
-                                      divided_video_dir,
-                                      frame_dir,
-                                      trash_dir,
-                                      timecode_dir,
-                                      video,
-                                      args.pyscenedetect_threshold,
-                                      args.punct,
-                                      args.classify_model,
-                                      args.mode
-                                      )
-                                     for video in split_videos]
+        annotation_path = os.path.join(annotation_dir, split + '.json')
+        if not os.path.exists(annotation_path):
+            logger.info(f"[{split}] making annotation has started.")
+            if not os.path.exists(trash_dir):
+                os.makedirs(trash_dir)
+            if not os.path.exists(timecode_dir):
+                os.makedirs(timecode_dir)
+            results = []
+            args_make_annotation_list = [(args.video_dir,
+                                          args.caption_dir,
+                                          divided_video_dir,
+                                          frame_dir,
+                                          trash_dir,
+                                          timecode_dir,
+                                          video,
+                                          args.pyscenedetect_threshold,
+                                          args.punct,
+                                          args.classify_model,
+                                          args.mode
+                                          )
+                                         for video in split_videos]
 
-        with multiprocessing.Pool(threads_num) as pool:
-            results = pool.map(make_annotation_wrapper, args_make_annotation_list)
+            with multiprocessing.Pool(threads_num) as pool:
+                results = pool.map(make_annotation_wrapper, args_make_annotation_list)
 
-        all_annotation_dict = {}
-        for result in results:
-            _, annotation_dict, _, _, _, _, _, _ = result
-            all_annotation_dict.update(annotation_dict)
-        with open(os.path.join(annotation_dir, split + '.json'), 'w') as f:
-            json.dump(all_annotation_dict, f)
+            all_annotation_dict = {}
+            for result in results:
+                _, annotation_dict, _, _, _, _, _, _ = result
+                all_annotation_dict.update(annotation_dict)
+            with open(annotation_path, 'w') as f:
+                json.dump(all_annotation_dict, f)
 
-        logger.info(f"[{split}] annotation has been made.")
+            logger.info(f"[{split}] annotation has been made.")
+        else:
+            logger.info(f'[{split}] annotation has already been made.')
 
-        logger.info(f"[{split}] making rawframes has been started.")
-
-        for video in split_videos:
-            elements_dir = os.path.join(divided_video_dir, video)
-            elements = os.listdir(elements_dir)
-            rawframe_dir = os.path.join(tmp_dir, 'rawframes', split, video)
-            for element in elements:
-                element_path = os.path.join(elements_dir, element)
-                args_extract_frame = (element_path,
-                                      rawframe_dir,
-                                      args.flow_type,
-                                      args.task,
-                                      args.new_short,
-                                      args.new_width,
-                                      args.new_height,
-                                      args.use_opencv,
-                                      args.input_frames)
-                _ = extract_frame(args_extract_frame)
+        if not os.path.exists(os.path.join(tmp_dir, 'rawframes', split)):
+            logger.info(f"[{split}] making rawframes has been started.")
+            for video in split_videos:
+                elements_dir = os.path.join(divided_video_dir, video)
+                elements = os.listdir(elements_dir)
+                rawframe_dir = os.path.join(tmp_dir, 'rawframes', split, video)
+                for element in elements:
+                    element_path = os.path.join(elements_dir, element)
+                    args_extract_frame = (element_path,
+                                          rawframe_dir,
+                                          args.flow_type,
+                                          args.task,
+                                          args.new_short,
+                                          args.new_width,
+                                          args.new_height,
+                                          args.use_opencv,
+                                          args.input_frames)
+                    _ = extract_frame(args_extract_frame)
+            logger.info(f"[{split}] rawframes have been made.")
+        else:
+            logger.info(f'[{split}] rawframes has already been made.')
         
-        logger.info(f"[{split}] rawframes have been made.")
         logger.info(f"[{split}] rawframes_validation has been started.")
 
         modalities = ['RGB', 'Flow']
 
+        all_err_video = []
         for video in split_videos:
             elements_dir = os.path.join(divided_video_dir, video)
             elements = os.listdir(elements_dir)
@@ -133,35 +140,43 @@ def main(args, logger):
                 element_path = os.path.join(elements_dir, element)
                 for modality in modalities:
                     rawframe_dir = os.path.join(tmp_dir, 'rawframes', split, video, modality, element[:-4])
-                    rawframe_validation(element_path, rawframe_dir, modality)
+                    err_count, err_video = rawframe_validation(element_path, rawframe_dir, modality)
+                    if err_count > 0:
+                        all_err_video.append(err_video)
+        if len(all_err_video) > 0:
+            logger.info(f'validation error:{all_err_video}')
+            exit()
 
         logger.info(f"[{split}] rawframes_validation has been done.")
 
-        logger.info(f"[{split}] feature extraction has been started.")
-
-        clip_lens = {'RGB': 1, 'Flow': 5}
-        ckpts = {'RGB': '/home/Tanaka/generate-commentary/mmaction2/checkpoints/tsn_r50_320p_1x1x8_50e_activitynet_video_rgb_20200804-9e15687e_cpu.pth',
-                 'Flow': '/home/Tanaka/generate-commentary/mmaction2/checkpoints/tsn_r50_320p_1x1x8_150e_activitynet_video_flow_20200804-13313f52_cpu.pth'}
         feature_dir = os.path.join(dataset_dir, split)
         if not os.path.exists(feature_dir):
-            os.makedirs(feature_dir)
-        args_feature_extraction_list = []
-        for video in split_videos:
-            elements_dir = os.path.join(divided_video_dir, video)
-            elements = os.listdir(elements_dir)
-            rawframe_dir = os.path.join(tmp_dir, 'rawframes', split, video)
-            for element in elements:
-                element_path = os.path.join(elements_dir, element)
-                cap = cv2.VideoCapture(element_path)
-                length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                for modality in modalities:
-                    args_feature_extraction = (element[:-4], rawframe_dir, feature_dir, length, modality, ckpts[modality], clip_lens[modality], args.frame_interval)
-                    args_feature_extraction_list.append(args_feature_extraction)
-        
-        with multiprocessing.Pool(threads_num) as pool:
-            pool.map(feature_extraction_wrapper, args_feature_extraction_list)
+            logger.info(f"[{split}] feature extraction has been started.")
+            clip_lens = {'RGB': 1, 'Flow': 5}
+            ckpts = {'RGB': '/home/Tanaka/generate-commentary/mmaction2/checkpoints/tsn_r50_320p_1x1x8_50e_activitynet_video_rgb_20200804-9e15687e_cpu.pth',
+                    'Flow': '/home/Tanaka/generate-commentary/mmaction2/checkpoints/tsn_r50_320p_1x1x8_150e_activitynet_video_flow_20200804-13313f52_cpu.pth'}
+            if not os.path.exists(feature_dir):
+                os.makedirs(feature_dir)
+            args_feature_extraction_list = []
+            for video in split_videos:
+                elements_dir = os.path.join(divided_video_dir, video)
+                elements = os.listdir(elements_dir)
+                rawframe_dir = os.path.join(tmp_dir, 'rawframes', split, video)
+                for element in elements:
+                    element_path = os.path.join(elements_dir, element)
+                    cap = cv2.VideoCapture(element_path)
+                    length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    for modality in modalities:
+                        args_feature_extraction = (element[:-4], rawframe_dir, feature_dir, length, modality, ckpts[modality], clip_lens[modality], args.frame_interval)
+                        args_feature_extraction_list.append(args_feature_extraction)
+            
+            with multiprocessing.Pool(threads_num) as pool:
+                pool.map(feature_extraction_wrapper, args_feature_extraction_list)
 
-        logger.info(f"[{split}] features have been extracted.")
+            logger.info(f"[{split}] features have been extracted.")
+        else:
+            logger.info(f'[{split}] features have already been extracted.')
+
         video_index += split_nums[split]
 
     logger.info("Dataset has been made.")
@@ -174,11 +189,16 @@ def rawframe_validation(video_path, frame_dir, modality):
     flow = len(os.listdir(frame_dir))
     if modality == 'Flow':
         frame = frame * 2 - 2
+    err_count = 0
+    err_video = ""
     try:
-        assert frame == flow, f'{video_name} frame:{frame} flow:{flow}'
+        assert frame == flow, f'{video_name} {modality} frame:{frame} flow:{flow}'
     except AssertionError as err:
         print('AssertionError:', err)
-        exit()
+        err_count = 1
+        err_video = video_name
+    
+    return err_count, err_video
 
 
 def save_pickle(obj, file):
