@@ -11,6 +11,8 @@ import cv2
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from caption.make_annotation_parallel import make_annotation_wrapper
+from tools.validation import rawframe_validation, feature_validation
+from tools.duration import duration
 from mmaction2.tools.data.build_rawframes_custom import extract_frame
 from mmaction2.tools.data.lol.tsn_feature_extraction_custom import feature_extraction_wrapper
 from logging import Logger, getLogger, StreamHandler, Formatter, FileHandler, DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -46,6 +48,7 @@ def main(args, logger):
     # split_dir = {split: os.path.join(args.dataset, args.exp_name, split) for split in split_dict.keys()}
     dataset_dir = os.path.join(args.dataset_dir, args.exp_name)
     annotation_dir = os.path.join(dataset_dir, "annotation")
+    duration_dir = os.path.join(dataset_dir, "duration")
     tmp_dir = os.path.join(args.tmp_dir, args.exp_name)
     dirs = [dataset_dir, annotation_dir, tmp_dir]
     for dir in dirs:
@@ -128,7 +131,7 @@ def main(args, logger):
         else:
             logger.info(f'[{split}] rawframes has already been made.')
         
-        logger.info(f"[{split}] rawframes_validation has been started.")
+        logger.info(f"[{split}] rawframes_validation has started.")
 
         modalities = ['RGB', 'Flow']
 
@@ -144,14 +147,14 @@ def main(args, logger):
                     if err_count > 0:
                         all_err_video.append(err_video)
         if len(all_err_video) > 0:
-            logger.info(f'validation error:{all_err_video}')
+            logger.error(f'rawframes validation error:{all_err_video}')
             exit()
 
         logger.info(f"[{split}] rawframes_validation has been done.")
 
         feature_dir = os.path.join(dataset_dir, split)
         if not os.path.exists(feature_dir):
-            logger.info(f"[{split}] feature extraction has been started.")
+            logger.info(f"[{split}] feature extraction has started.")
             clip_lens = {'RGB': 1, 'Flow': 5}
             ckpts = {'RGB': '/home/Tanaka/generate-commentary/mmaction2/checkpoints/tsn_r50_320p_1x1x8_50e_activitynet_video_rgb_20200804-9e15687e_cpu.pth',
                     'Flow': '/home/Tanaka/generate-commentary/mmaction2/checkpoints/tsn_r50_320p_1x1x8_150e_activitynet_video_flow_20200804-13313f52_cpu.pth'}
@@ -167,7 +170,14 @@ def main(args, logger):
                     cap = cv2.VideoCapture(element_path)
                     length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                     for modality in modalities:
-                        args_feature_extraction = (element[:-4], rawframe_dir, feature_dir, length, modality, ckpts[modality], clip_lens[modality], args.frame_interval)
+                        args_feature_extraction = (element[:-4],
+                                                   rawframe_dir,
+                                                   feature_dir,
+                                                   length,
+                                                   modality,
+                                                   ckpts[modality],
+                                                   clip_lens[modality],
+                                                   args.frame_interval)
                         args_feature_extraction_list.append(args_feature_extraction)
             
             with multiprocessing.Pool(threads_num) as pool:
@@ -177,28 +187,20 @@ def main(args, logger):
         else:
             logger.info(f'[{split}] features have already been extracted.')
 
+        logger.info(f'[{split}] feature validation has started.')
+        err_videos = feature_validation(divided_video_dir, feature_dir)
+        if len(err_videos) > 0:
+            logger.error(f'feature extraction validation error: {err_videos}')
+            exit()
+        logger.info(f'[{split}] feature validation has done.')
+
         video_index += split_nums[split]
 
+    logger.info("Making duration has started.")
+    duration(os.path.join(tmp_dir, "divide"), duration_dir)
+    logger.info("duration_frame.csv has been made.")
+
     logger.info("Dataset has been made.")
-
-
-def rawframe_validation(video_path, frame_dir, modality):
-    video_name = os.path.basename(frame_dir)
-    cap = cv2.VideoCapture(video_path)
-    frame = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    flow = len(os.listdir(frame_dir))
-    if modality == 'Flow':
-        frame = frame * 2 - 2
-    err_count = 0
-    err_video = ""
-    try:
-        assert frame == flow, f'{video_name} {modality} frame:{frame} flow:{flow}'
-    except AssertionError as err:
-        print('AssertionError:', err)
-        err_count = 1
-        err_video = video_name
-    
-    return err_count, err_video
 
 
 def save_pickle(obj, file):
