@@ -47,7 +47,7 @@ def main(args, logger):
     split_ratio = {'train': 70, 'valid': 5, 'test': 25}
     # split_dir = {split: os.path.join(args.dataset, args.exp_name, split) for split in split_dict.keys()}
     dataset_dir = os.path.join(args.dataset_dir, args.exp_name)
-    annotation_dir = os.path.join(dataset_dir, "annotation")
+    annotation_dir = os.path.join(dataset_dir, "annotation", args.punct)
     duration_dir = os.path.join(dataset_dir, "duration")
     tmp_dir = os.path.join(args.tmp_dir, args.exp_name)
     dirs = [dataset_dir, annotation_dir, tmp_dir]

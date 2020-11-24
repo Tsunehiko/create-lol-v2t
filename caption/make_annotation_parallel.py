@@ -8,6 +8,9 @@ import pickle
 import datetime
 import multiprocessing
 from functools import reduce
+from collections import deque
+
+from numpy.lib.function_base import delete
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -94,8 +97,6 @@ def main(args, logger):
         logger.info(f"sentences:{sentences_num} ave_sentences:{sentences_num/clips_num}")
         logger.info(f"words:{words_num} ave_words:{words_num/clips_num}")
 
-        with open(os.path.join(args.annotation_dir, "annotation.txt"), 'a') as f:
-            print(annotation_dict, file=f)
         all_clips_num += clips_num
         all_duration_num += duration_num
         all_sentences_num += sentences_num
@@ -138,13 +139,22 @@ def make_annotation(video_dir,
         os.makedirs(trash_dir_path)
     if os.path.exists(timecode_path):
         print(f'[dividing]: {video} has been started. (loading...)')
-        timecode_list = load_pickle(timecode_path)
+        timecode_dict = load_pickle(timecode_path)
         print(f'[dividing]: {video} has been done. (timecode_list has been loaded.)')
     else:
         print(f'[dividing]: {video} has been started.')
         timecode_list = divide_video(video_path, video_name, video_elements_dir_path, pyscenedetect_threshold)
+        video_elements = [video_name[:-4] for video_name in sorted(os.listdir(video_elements_dir_path))]
+        try:
+            assert len(timecode_list) == len(video_elements), f'video:{video} timecode_list:{len(timecode_list)} video_elements:{len(video_elements)}'
+        except AssertionError as err:
+            print('AssertionError:', err)
+        elements_num = len(video_elements)
+        timecode_dict = {}
+        for i in range(elements_num):
+            timecode_dict[video_elements[i]] = timecode_list[i]
         print(f'[dividing]: {video} has been done.')
-        save_pickle(timecode_list, timecode_path)
+        save_pickle(timecode_dict, timecode_path)
 
     clips_num = 0
     duration_num = 0
@@ -167,7 +177,13 @@ def make_annotation(video_dir,
             fps = capture.get(cv2.CAP_PROP_FPS)
             frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
             duration = frame_count / fps
-            annotation_data, sentences, words = make_caption_data(video_element[:-4], caption_path, timecode_list[i], duration, fps, punct, mode)
+            annotation_data, sentences, words = make_caption_data(video_element[:-4],
+                                                                  caption_path,
+                                                                  timecode_dict[video_element[:-4]],
+                                                                  duration,
+                                                                  fps,
+                                                                  punct,
+                                                                  mode)
             if len(annotation_data) == 0:
                 shutil.move(video_element_path, trash_dir_path)
                 continue
@@ -302,14 +318,22 @@ def segement_sentences(joined_sentence, punct='deepsegment'):
         fastpunct = FastPunct('en')
         sentences = []
         divided_sentences = []
-        joined_sentence_sequence = len(joined_sentence)
-        while joined_sentence_sequence > 0:
-            punct_sentences = fastpunct.punct([joined_sentence[:390]], batch_size=32)
-            divided_sentences = sent_tokenize(punct_sentences[0])
-            sentences.extend(divided_sentences[:-1])
-            joined_sentence = divided_sentences[-1] + joined_sentence[390:]
-            joined_sentence_sequence = joined_sentence_sequence - 390 + len(divided_sentences[-1])
-        sentences.append(divided_sentences[-1])
+        joined_sentence_words = deque(joined_sentence.split())
+        while len(joined_sentence_words) > 0:
+            punct_target_sentence = ""
+            punct_words = []
+            while len(punct_target_sentence) < 390 or len(joined_sentence_words) > 0:
+                print("=" * 100)
+                print(joined_sentence_words)
+                punct_words.append(joined_sentence_words.popleft())
+                punct_target_sentence = reduce(lambda a, b: a + ' ' + b, punct_words)
+            punct_output_sentences = fastpunct.punct([punct_target_sentence], batch_size=32)
+            divided_sentences = sent_tokenize(punct_output_sentences[0])
+            if len(divided_sentences) > 1:
+                sentences.extend(divided_sentences[:-1])
+                joined_sentence_words.extendleft(reversed(divided_sentences[-1].split()))
+            else:
+                sentences.extend(divided_sentences)
     elif punct == 'deepsegment':
         segmenter = DeepSegment('en')
         sentences = []
@@ -330,6 +354,7 @@ def segement_sentences(joined_sentence, punct='deepsegment'):
 
 
 def make_timestamps(caption_dict_list, sentences, mode='interpolation'):
+    delete_dict = {',': None, '.': None, "'": None, ' ': None, '-': None, "!": None, "?": None}
     if mode == 'wide':
         tmp_start = caption_dict_list[0]['start']
         timestamps = []
@@ -339,8 +364,8 @@ def make_timestamps(caption_dict_list, sentences, mode='interpolation'):
         for i, caption_dict in enumerate(caption_dict_list):
             if sentence_i == num_sentences + 1:
                 break
-            sentence = sentences[sentence_i].translate(str.maketrans({',': None, '.': None, "'": None, ' ': None})).lower()
-            caption = caption_dict['sentence'].translate(str.maketrans({',': None, '.': None, "'": None, ' ': None, '-': None})).lower()
+            sentence = sentences[sentence_i].translate(str.maketrans(delete_dict)).lower()
+            caption = caption_dict['sentence'].translate(str.maketrans(delete_dict)).lower()
             if caption not in sentence:
                 timestamps.append([tmp_start, caption_dict['end']])
                 sentence_i += 1
@@ -355,12 +380,12 @@ def make_timestamps(caption_dict_list, sentences, mode='interpolation'):
         num_sentences = len(sentences)
         tmp_start = caption_dict_list[0]['start']
         sentence_i = 0
-        sentence = sentences[sentence_i].translate(str.maketrans({',': None, '.': None, "'": None, ' ': None, '-': None})).lower()
+        sentence = sentences[sentence_i].translate(str.maketrans(delete_dict)).lower()
         caption_i = 0
-        caption = caption_dict_list[caption_i]['sentence'].translate(str.maketrans({',': None, '.': None, "'": None, ' ': None, '-': None})).lower()
+        caption = caption_dict_list[caption_i]['sentence'].translate(str.maketrans(delete_dict)).lower()
         tmp_caption = caption
         while sentence_i < num_sentences:
-            sentence = sentences[sentence_i].translate(str.maketrans({',': None, '.': None, "'": None, ' ': None, '-': None})).lower()
+            sentence = sentences[sentence_i].translate(str.maketrans(delete_dict)).lower()
             if len(tmp_caption) >= len(sentence):
                 tmp_end = (caption_dict_list[caption_i]['end'] - tmp_start) * (len(sentence) / len(tmp_caption)) + tmp_start
                 timestamps.append([tmp_start, tmp_end])
@@ -369,11 +394,7 @@ def make_timestamps(caption_dict_list, sentences, mode='interpolation'):
                 sentence_i += 1
             else:
                 caption_i += 1
-                tmp_caption = tmp_caption + caption_dict_list[caption_i]['sentence'].translate(str.maketrans({',': None,
-                                                                                                              '.': None,
-                                                                                                              "'": None,
-                                                                                                              ' ': None,
-                                                                                                              '-': None})).lower()
+                tmp_caption = tmp_caption + caption_dict_list[caption_i]['sentence'].translate(str.maketrans(delete_dict)).lower()
     else:
         raise Exception('You have probably chosen something other than wide and interpolation.')
     
