@@ -44,7 +44,7 @@ def parse_args():
 
 
 def main(args, logger):
-    split_ratio = {'train': 70, 'valid': 5, 'test': 25}
+    split_ratio = {'training': 75, 'validation': 5, 'testing': 20}
     # split_dir = {split: os.path.join(args.dataset, args.exp_name, split) for split in split_dict.keys()}
     dataset_dir = os.path.join(args.dataset_dir, args.exp_name)
     annotation_dir = os.path.join(dataset_dir, "annotation", args.punct)
@@ -55,13 +55,14 @@ def main(args, logger):
         if not os.path.isdir(dir):
             os.makedirs(dir)
     video_names = sorted([re.search(r"(.*)\.mp4", file_name).group(1) for file_name in os.listdir(args.video_dir)])
+    # video_names = video_names[0:2]
     video_num = len(video_names)
     split_nums = {}
-    split_nums['train'] = int((video_num - 2) * split_ratio['train'] / 100)
-    split_nums['test'] = max(int((video_num - 2) * split_ratio['test'] / 100), 1)
-    split_nums['valid'] = max(video_num - split_nums['train'] - split_nums['test'], 1)
-    # split_nums['train'], split_nums['test'], split_nums['valid'] = 2, 0, 0
-    logger.info(f"All: {video_num}, train: {split_nums['train']}, valid: {split_nums['valid']}, test: {split_nums['test']}")
+    split_nums['training'] = int((video_num - 2) * split_ratio['training'] / 100)
+    split_nums['testing'] = max(int((video_num - 2) * split_ratio['testing'] / 100), 1)
+    split_nums['validation'] = max(video_num - split_nums['training'] - split_nums['testing'], 1)
+    # split_nums['training'], split_nums['testing'], split_nums['validation'] = 2, 0, 0
+    logger.info(f"All: {video_num}, training: {split_nums['training']}, validation: {split_nums['validation']}, testing: {split_nums['testing']}")
 
     threads_num = min(multiprocessing.cpu_count(), args.threads)
     logger.info(f'threads: {threads_num}')
@@ -74,13 +75,13 @@ def main(args, logger):
         trash_dir = os.path.join(tmp_dir, 'trash', split)
         timecode_dir = os.path.join(tmp_dir, 'timecode', split)
         annotation_path = os.path.join(annotation_dir, split + '.json')
+        tmp_annotation_dir = os.path.join(tmp_dir, 'annotation', split)
         if not os.path.exists(annotation_path):
             logger.info(f"[{split}] making annotation has started.")
             if not os.path.exists(trash_dir):
                 os.makedirs(trash_dir)
             if not os.path.exists(timecode_dir):
                 os.makedirs(timecode_dir)
-            results = []
             args_make_annotation_list = [(args.video_dir,
                                           args.caption_dir,
                                           divided_video_dir,
@@ -91,16 +92,19 @@ def main(args, logger):
                                           args.pyscenedetect_threshold,
                                           args.punct,
                                           args.classify_model,
-                                          args.mode
+                                          args.mode,
+                                          tmp_annotation_dir
                                           )
                                          for video in split_videos]
 
             with multiprocessing.Pool(threads_num) as pool:
-                results = pool.map(make_annotation_wrapper, args_make_annotation_list)
+                pool.map(make_annotation_wrapper, args_make_annotation_list)
 
             all_annotation_dict = {}
-            for result in results:
-                _, annotation_dict, _, _, _, _, _, _ = result
+            tmp_annotation_paths = os.listdir(tmp_annotation_dir)
+            for tmp_annotation_path in tmp_annotation_paths:
+                with open(os.path.join(tmp_annotation_dir, tmp_annotation_path), 'rb') as f:
+                    annotation_dict = json.load(f)
                 all_annotation_dict.update(annotation_dict)
             with open(annotation_path, 'w') as f:
                 json.dump(all_annotation_dict, f)
@@ -157,7 +161,7 @@ def main(args, logger):
             logger.info(f"[{split}] feature extraction has started.")
             clip_lens = {'RGB': 1, 'Flow': 5}
             ckpts = {'RGB': '/home/Tanaka/generate-commentary/mmaction2/checkpoints/tsn_r50_320p_1x1x8_50e_activitynet_video_rgb_20200804-9e15687e_cpu.pth',
-                    'Flow': '/home/Tanaka/generate-commentary/mmaction2/checkpoints/tsn_r50_320p_1x1x8_150e_activitynet_video_flow_20200804-13313f52_cpu.pth'}
+                     'Flow': '/home/Tanaka/generate-commentary/mmaction2/checkpoints/tsn_r50_320p_1x1x8_150e_activitynet_video_flow_20200804-13313f52_cpu.pth'}
             if not os.path.exists(feature_dir):
                 os.makedirs(feature_dir)
             args_feature_extraction_list = []
@@ -240,5 +244,5 @@ if __name__ == '__main__':
     if not os.path.exists(args.log):
         os.makedirs(args.log)
     date = str(datetime.date.today())
-    logger = init_logger(os.path.join(args.log, args.exp_name))
+    logger = init_logger(os.path.join(args.log, args.exp_name, date))
     main(args, logger)

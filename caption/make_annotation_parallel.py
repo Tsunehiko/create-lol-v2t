@@ -9,6 +9,7 @@ import datetime
 import multiprocessing
 from functools import reduce
 from collections import deque
+# import matplotlib.pyplot as plt
 
 from numpy.lib.function_base import delete
 
@@ -47,6 +48,7 @@ def parse_args():
 def main(args, logger):
 
     video_names = sorted([re.search(r"(.*)\.mp4", file_name).group(1) for file_name in os.listdir(args.video_dir)])
+
     all_clips_num = 0
     all_duration_num = 0
     all_sentences_num = 0
@@ -69,7 +71,7 @@ def main(args, logger):
 
     # video_names_threads = [video_names[idx:idx + threads_num] for idx in range(0, len(video_names), threads_num)]
 
-    results = []
+    # results = []
 
     args_video_names = [(args.video_dir,
                          args.caption_dir,
@@ -85,31 +87,39 @@ def main(args, logger):
                          ) for video in video_names]
 
     with multiprocessing.Pool(threads_num) as pool:
-        results = pool.map(make_annotation_wrapper, args_video_names)
+        pool.map(make_annotation_wrapper, args_video_names)
 
-    for result in results:
-        video, annotation_dict, clips_num, duration_num, sentences_num, words_num, use_list, unuse_list = result
-        logger.info(f"video:{video}")
-        logger.info(f"clips:{clips_num}")
-        logger.info(f"use  :{use_list}")
-        logger.info(f"unuse:{unuse_list}")
-        logger.info(f"duration:{duration_num} ave_duration:{duration_num/clips_num}")
-        logger.info(f"sentences:{sentences_num} ave_sentences:{sentences_num/clips_num}")
-        logger.info(f"words:{words_num} ave_words:{words_num/clips_num}")
+    # 情報を表示させたい場合はmake_annotationの返り値を変更する
+    # for result in results:
+    #     video, annotation_dict, clips_num, duration_num, sentences_num, words_num, use_list, unuse_list = result
+    #     logger.info(f"video:{video}")
+    #     logger.info(f"clips:{clips_num}")
+    #     logger.info(f"use  :{use_list}")
+    #     logger.info(f"unuse:{unuse_list}")
+    #     logger.info(f"duration:{duration_num} ave_duration:{duration_num/clips_num}")
+    #     logger.info(f"sentences:{sentences_num} ave_sentences:{sentences_num/clips_num}")
+    #     logger.info(f"words:{words_num} ave_words:{words_num/clips_num}")
 
-        all_clips_num += clips_num
-        all_duration_num += duration_num
-        all_sentences_num += sentences_num
-        all_words_num += words_num
-        all_annotation_dict.update(annotation_dict)
+    #     all_clips_num += clips_num
+    #     all_duration_num += duration_num
+    #     all_sentences_num += sentences_num
+    #     all_words_num += words_num
+    #     all_annotation_dict.update(annotation_dict)
 
-    logger.info("Entire data")
-    logger.info(f"clips:{all_clips_num} ave_clips:{all_clips_num/len(video_names)}")
-    logger.info(f"duration:{all_duration_num} ave_duration:{all_duration_num/all_clips_num}")
-    logger.info(f"sentences:{all_sentences_num} ave_sentences:{all_sentences_num/all_clips_num}")
-    logger.info(f"words:{all_words_num} ave_words:{all_words_num/all_clips_num}")
+    # logger.info("Entire data")
+    # logger.info(f"clips:{all_clips_num} ave_clips:{all_clips_num/len(video_names)}")
+    # logger.info(f"duration:{all_duration_num} ave_duration:{all_duration_num/all_clips_num}")
+    # logger.info(f"sentences:{all_sentences_num} ave_sentences:{all_sentences_num/all_clips_num}")
+    # logger.info(f"words:{all_words_num} ave_words:{all_words_num/all_clips_num}")
     with open(os.path.join(args.annotation_dir, 'annotation.json'), 'w') as f:
         json.dump(all_annotation_dict, f)
+
+    # for iter, vid in enumerate(vids_list):
+    #     print(f'{vid}: {preds_list[iter]}')
+    # fig = plt.figure()
+    # ax1 = fig.add_subplot(1, 1, 1)
+    # ax1.hist(preds_list, range=(0, 1), bins=10)
+    # plt.savefig("./result.png")
 
 
 def make_annotation_wrapper(args):
@@ -126,82 +136,94 @@ def make_annotation(video_dir,
                     pyscenedetect_threshold,
                     punct,
                     classify_model,
-                    mode):
-    cv2.setNumThreads(1)
-    print(f'{video} has been started.')
-    video_name = video + ".mp4"
-    video_path = os.path.join(video_dir, video_name)
-    caption_path = os.path.join(caption_dir, (video + ".en.vtt"))
-    video_elements_dir_path = os.path.join(divided_video_dir, video)
-    timecode_path = os.path.join(timecode_dir, video + ".pkl")
-    trash_dir_path = os.path.join(trash_dir_path, video)
-    if not os.path.exists(trash_dir_path):
-        os.makedirs(trash_dir_path)
-    if os.path.exists(timecode_path):
-        print(f'[dividing]: {video} has been started. (loading...)')
-        timecode_dict = load_pickle(timecode_path)
-        print(f'[dividing]: {video} has been done. (timecode_list has been loaded.)')
-    else:
-        print(f'[dividing]: {video} has been started.')
-        timecode_list = divide_video(video_path, video_name, video_elements_dir_path, pyscenedetect_threshold)
-        video_elements = [video_name[:-4] for video_name in sorted(os.listdir(video_elements_dir_path))]
-        try:
-            assert len(timecode_list) == len(video_elements), f'video:{video} timecode_list:{len(timecode_list)} video_elements:{len(video_elements)}'
-        except AssertionError as err:
-            print('AssertionError:', err)
-        elements_num = len(video_elements)
-        timecode_dict = {}
-        for i in range(elements_num):
-            timecode_dict[video_elements[i]] = timecode_list[i]
-        print(f'[dividing]: {video} has been done.')
-        save_pickle(timecode_dict, timecode_path)
-
-    clips_num = 0
-    duration_num = 0
-    sentences_num = 0
-    words_num = 0
-    use_list = []
-    unuse_list = []
-    annotation_dict = {}
-
-    video_element_names = sorted(os.listdir(video_elements_dir_path))
-    for i, video_element in enumerate(video_element_names):
-        video_element_path = os.path.join(video_elements_dir_path, video_element)
-        is_useful = classify(video_elements_dir_path,
-                             video_element,
-                             os.path.join(frame_dir, video_name, video_element),
-                             classify_model)
-        
-        if is_useful:
-            capture = cv2.VideoCapture(video_element_path)
-            fps = capture.get(cv2.CAP_PROP_FPS)
-            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-            duration = frame_count / fps
-            annotation_data, sentences, words = make_caption_data(video_element[:-4],
-                                                                  caption_path,
-                                                                  timecode_dict[video_element[:-4]],
-                                                                  duration,
-                                                                  fps,
-                                                                  punct,
-                                                                  mode)
-            if len(annotation_data) == 0:
-                shutil.move(video_element_path, trash_dir_path)
-                continue
-            print(f'[caption]: {video_element[:-4]} has been done.')
-            annotation_dict.update(annotation_data)
-
-            clips_num += 1
-            duration_num += duration
-            sentences_num += sentences
-            words_num += words
-            use_list.append(i)
+                    mode,
+                    tmp_annotation_dir
+                    ):
+    tmp_annotation_path = os.path.join(tmp_annotation_dir, video + '_annotation.json')
+    if not os.path.exists(tmp_annotation_path):
+        cv2.setNumThreads(1)
+        print(f'{video} has been started.')
+        video_name = video + ".mp4"
+        video_path = os.path.join(video_dir, video_name)
+        caption_path = os.path.join(caption_dir, (video + ".en.vtt"))
+        video_elements_dir_path = os.path.join(divided_video_dir, video)
+        timecode_path = os.path.join(timecode_dir, video + ".pkl")
+        trash_dir_path = os.path.join(trash_dir_path, video)
+        if not os.path.exists(trash_dir_path):
+            os.makedirs(trash_dir_path)
+        if os.path.exists(timecode_path):
+            print(f'[dividing]: {video} has been started. (loading...)')
+            timecode_dict = load_pickle(timecode_path)
+            print(f'[dividing]: {video} has been done. (timecode_list has been loaded.)')
         else:
-            shutil.move(video_element_path, trash_dir_path)
-            unuse_list.append(i)
+            print(f'[dividing]: {video} has been started.')
+            timecode_list = divide_video(video_path, video_name, video_elements_dir_path, pyscenedetect_threshold)
+            video_elements = [video_name[:-4] for video_name in sorted(os.listdir(video_elements_dir_path))]
+            try:
+                assert len(timecode_list) == len(video_elements), f'video:{video} timecode_list:{len(timecode_list)} video_elements:{len(video_elements)}'
+            except AssertionError as err:
+                print('AssertionError:', err)
+            elements_num = len(video_elements)
+            timecode_dict = {}
+            for i in range(elements_num):
+                timecode_dict[video_elements[i]] = timecode_list[i]
+            print(f'[dividing]: {video} has been done.')
+            save_pickle(timecode_dict, timecode_path)
+
+        clips_num = 0
+        duration_num = 0
+        sentences_num = 0
+        words_num = 0
+        use_list = []
+        unuse_list = []
+        annotation_dict = {}
+
+        video_element_names = sorted(os.listdir(video_elements_dir_path))
+        for i, video_element in enumerate(video_element_names):
+            video_element_path = os.path.join(video_elements_dir_path, video_element)
+            is_useful = classify(video_elements_dir_path,
+                                 video_element,
+                                 os.path.join(frame_dir, video_name, video_element),
+                                 classify_model)
+            
+            if is_useful:
+                capture = cv2.VideoCapture(video_element_path)
+                fps = capture.get(cv2.CAP_PROP_FPS)
+                frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+                duration = frame_count / fps
+                annotation_data, sentences, words = make_caption_data(video_element[:-4],
+                                                                      caption_path,
+                                                                      timecode_dict[video_element[:-4]],
+                                                                      duration,
+                                                                      fps,
+                                                                      punct,
+                                                                      mode)
+                if len(annotation_data) == 0:
+                    shutil.move(video_element_path, trash_dir_path)
+                    continue
+                print(f'[caption]: {video_element[:-4]} has been done.')
+                annotation_dict.update(annotation_data)
+
+                clips_num += 1
+                duration_num += duration
+                sentences_num += sentences
+                words_num += words
+                use_list.append(i)
+            else:
+                shutil.move(video_element_path, trash_dir_path)
+                unuse_list.append(i)
+        
+        if not os.path.exists(tmp_annotation_dir):
+            os.makedirs(tmp_annotation_dir)
+        with open(tmp_annotation_path, 'w') as f:
+            json.dump(annotation_dict, f)
+    
+    else:
+        print(f'{video} annotation is already exist.')
 
     print(f'{video} has been done.')
 
-    return (video, annotation_dict, clips_num, duration_num, sentences_num, words_num, use_list, unuse_list)
+    # return (video, annotation_dict, clips_num, duration_num, sentences_num, words_num, use_list, unuse_list)
 
 
 def make_caption_data(video_element_name, caption_path, timecodes, duration, fps, punct, mode):
