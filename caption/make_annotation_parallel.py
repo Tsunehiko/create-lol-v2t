@@ -9,9 +9,6 @@ import datetime
 import multiprocessing
 from functools import reduce
 from collections import deque
-# import matplotlib.pyplot as plt
-
-from numpy.lib.function_base import delete
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -36,6 +33,8 @@ def parse_args():
     parser.add_argument('--annotation-dir', type=str, help='path to annotation directory')
     parser.add_argument('--frame-dir', type=str, help='path to frame directory in divided videos')
     parser.add_argument('--timecode-dir', type=str, help='path to timecode pkl directory')
+    parser.add_argument('--trash-dir', type=str, help='path to the directory which has unuse videos.')
+    parser.add_argument('--tmp-annotation-dir', type=str, help='path to the directory which has annotation.json for each video')
     parser.add_argument('--pyscenedetect-threshold', type=int, default=20, help='pyscenedetect threshold')
     parser.add_argument('--log', type=str, help='path to log')
     parser.add_argument('--threads', type=int, help='num of threads')
@@ -49,17 +48,11 @@ def main(args, logger):
 
     video_names = sorted([re.search(r"(.*)\.mp4", file_name).group(1) for file_name in os.listdir(args.video_dir)])
 
-    all_clips_num = 0
-    all_duration_num = 0
-    all_sentences_num = 0
-    all_words_num = 0
-    all_annotation_dict = {}
-
     annotation_dir = args.annotation_dir
     if not os.path.isdir(annotation_dir):
         os.makedirs(annotation_dir)
 
-    trash_dir_path = os.path.join("./tmp/test_interpolation/trash")
+    trash_dir_path = args.trash_dir
     if not os.path.isdir(trash_dir_path):
         os.makedirs(trash_dir_path)
 
@@ -67,11 +60,10 @@ def main(args, logger):
     if not os.path.isdir(timecode_dir):
         os.makedirs(timecode_dir)
 
+    if not os.path.exists(args.tmp_annotation_dir):
+        os.makedirs(args.tmp_annotation_dir)
+
     threads_num = min(multiprocessing.cpu_count(), args.threads, len(video_names))
-
-    # video_names_threads = [video_names[idx:idx + threads_num] for idx in range(0, len(video_names), threads_num)]
-
-    # results = []
 
     args_video_names = [(args.video_dir,
                          args.caption_dir,
@@ -83,43 +75,21 @@ def main(args, logger):
                          args.pyscenedetect_threshold,
                          args.punct,
                          args.classify_model,
-                         args.mode
+                         args.mode,
+                         args.tmp_annotation_dir
                          ) for video in video_names]
 
     with multiprocessing.Pool(threads_num) as pool:
         pool.map(make_annotation_wrapper, args_video_names)
 
-    # 情報を表示させたい場合はmake_annotationの返り値を変更する
-    # for result in results:
-    #     video, annotation_dict, clips_num, duration_num, sentences_num, words_num, use_list, unuse_list = result
-    #     logger.info(f"video:{video}")
-    #     logger.info(f"clips:{clips_num}")
-    #     logger.info(f"use  :{use_list}")
-    #     logger.info(f"unuse:{unuse_list}")
-    #     logger.info(f"duration:{duration_num} ave_duration:{duration_num/clips_num}")
-    #     logger.info(f"sentences:{sentences_num} ave_sentences:{sentences_num/clips_num}")
-    #     logger.info(f"words:{words_num} ave_words:{words_num/clips_num}")
-
-    #     all_clips_num += clips_num
-    #     all_duration_num += duration_num
-    #     all_sentences_num += sentences_num
-    #     all_words_num += words_num
+    # all_annotation_dict = {}
+    # tmp_annotation_paths = os.listdir(args.tmp_annotation_dir)
+    # for tmp_annotation_path in tmp_annotation_paths:
+    #     with open(os.path.join(args.tmp_annotation_dir, tmp_annotation_path), 'rb') as f:
+    #         annotation_dict = json.load(f)
     #     all_annotation_dict.update(annotation_dict)
-
-    # logger.info("Entire data")
-    # logger.info(f"clips:{all_clips_num} ave_clips:{all_clips_num/len(video_names)}")
-    # logger.info(f"duration:{all_duration_num} ave_duration:{all_duration_num/all_clips_num}")
-    # logger.info(f"sentences:{all_sentences_num} ave_sentences:{all_sentences_num/all_clips_num}")
-    # logger.info(f"words:{all_words_num} ave_words:{all_words_num/all_clips_num}")
-    with open(os.path.join(args.annotation_dir, 'annotation.json'), 'w') as f:
-        json.dump(all_annotation_dict, f)
-
-    # for iter, vid in enumerate(vids_list):
-    #     print(f'{vid}: {preds_list[iter]}')
-    # fig = plt.figure()
-    # ax1 = fig.add_subplot(1, 1, 1)
-    # ax1.hist(preds_list, range=(0, 1), bins=10)
-    # plt.savefig("./result.png")
+    # with open(os.path.join(args.annotation_dir, 'annotation.json'), 'w') as f:
+    #     json.dump(all_annotation_dict, f)
 
 
 def make_annotation_wrapper(args):
@@ -178,6 +148,13 @@ def make_annotation(video_dir,
         unuse_list = []
         annotation_dict = {}
 
+        if args.punct == 'deepsegment':
+            segmenter = DeepSegment('en')
+        elif args.punct == 'fastpunct':
+            segmenter = FastPunct('en')
+        else:
+            raise Exception('You have probably chosen something other than fastpunct and deepsegement.')
+    
         video_element_names = sorted(os.listdir(video_elements_dir_path))
         for i, video_element in enumerate(video_element_names):
             video_element_path = os.path.join(video_elements_dir_path, video_element)
@@ -197,7 +174,8 @@ def make_annotation(video_dir,
                                                                       duration,
                                                                       fps,
                                                                       punct,
-                                                                      mode)
+                                                                      mode,
+                                                                      segmenter)
                 if len(annotation_data) == 0:
                     shutil.move(video_element_path, trash_dir_path)
                     continue
@@ -213,20 +191,18 @@ def make_annotation(video_dir,
                 shutil.move(video_element_path, trash_dir_path)
                 unuse_list.append(i)
         
-        if not os.path.exists(tmp_annotation_dir):
-            os.makedirs(tmp_annotation_dir)
         with open(tmp_annotation_path, 'w') as f:
             json.dump(annotation_dict, f)
-    
-    else:
-        print(f'{video} annotation is already exist.')
 
-    print(f'{video} has been done.')
+    else:
+        print(f'[caption]: {video} annotation is already exist.')
+
+    print(f'[divide/caption]: {video} has been done.')
 
     # return (video, annotation_dict, clips_num, duration_num, sentences_num, words_num, use_list, unuse_list)
 
 
-def make_caption_data(video_element_name, caption_path, timecodes, duration, fps, punct, mode):
+def make_caption_data(video_element_name, caption_path, timecodes, duration, fps, punct, mode, segmenter):
     start, end = Timecode(fps, timecodes[0]), Timecode(fps, timecodes[1])
 
     captions = webvtt.read(caption_path)
@@ -235,7 +211,7 @@ def make_caption_data(video_element_name, caption_path, timecodes, duration, fps
 
     caption_dict_list, joined_sentence, words_num = make_caption_dict_list(captions, fps, start, end, mode)
     
-    sentences = segement_sentences(joined_sentence, punct)
+    sentences = segement_sentences(joined_sentence, segmenter, punct)
 
     if len(caption_dict_list) > 0:
         timestamps = make_timestamps(caption_dict_list, sentences, mode)
@@ -334,10 +310,9 @@ def make_caption_dict_list(captions, fps, start, end, mode='interpolation'):
     return caption_dict_list, joined_sentence, words_num
 
 
-def segement_sentences(joined_sentence, punct='deepsegment'):
+def segement_sentences(joined_sentence, segmenter, punct='deepsegment'):
     segmented_sentences = []
     if punct == 'fastpunct':
-        fastpunct = FastPunct('en')
         sentences = []
         divided_sentences = []
         joined_sentence_words = deque(joined_sentence.split())
@@ -349,7 +324,7 @@ def segement_sentences(joined_sentence, punct='deepsegment'):
                 print(joined_sentence_words)
                 punct_words.append(joined_sentence_words.popleft())
                 punct_target_sentence = reduce(lambda a, b: a + ' ' + b, punct_words)
-            punct_output_sentences = fastpunct.punct([punct_target_sentence], batch_size=32)
+            punct_output_sentences = segmenter.punct([punct_target_sentence], batch_size=32)
             divided_sentences = sent_tokenize(punct_output_sentences[0])
             if len(divided_sentences) > 1:
                 sentences.extend(divided_sentences[:-1])
@@ -357,7 +332,6 @@ def segement_sentences(joined_sentence, punct='deepsegment'):
             else:
                 sentences.extend(divided_sentences)
     elif punct == 'deepsegment':
-        segmenter = DeepSegment('en')
         sentences = []
         words = joined_sentence.strip().split()
         while len(words) > 0:

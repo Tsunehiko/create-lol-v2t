@@ -7,15 +7,16 @@ import datetime
 import multiprocessing
 import json
 import cv2
+from tqdm import tqdm
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from caption.make_annotation_parallel import make_annotation_wrapper
-from tools.validation import rawframe_validation, feature_validation
-from tools.duration import duration
-from mmaction2.tools.data.build_rawframes_custom import extract_frame
-from mmaction2.tools.data.lol.tsn_feature_extraction_custom import feature_extraction_wrapper
-from logging import Logger, getLogger, StreamHandler, Formatter, FileHandler, DEBUG, INFO, WARNING, ERROR, CRITICAL
+from caption.make_annotation_parallel import make_annotation_wrapper  # noqa
+from tools.validation import rawframe_validation, feature_validation  # noqa
+from tools.duration import duration  # noqa
+from mmaction2.tools.data.build_rawframes_custom import extract_frame  # noqa
+from mmaction2.tools.data.lol.tsn_feature_extraction_custom import feature_extraction_wrapper  # noqa
+from logging import Logger, getLogger, StreamHandler, Formatter, FileHandler, DEBUG, INFO, WARNING, ERROR, CRITICAL  # noqa
 
 
 def parse_args():
@@ -61,14 +62,14 @@ def main(args, logger):
     split_nums['training'] = int((video_num - 2) * split_ratio['training'] / 100)
     split_nums['testing'] = max(int((video_num - 2) * split_ratio['testing'] / 100), 1)
     split_nums['validation'] = max(video_num - split_nums['training'] - split_nums['testing'], 1)
-    # split_nums['training'], split_nums['testing'], split_nums['validation'] = 2, 0, 0
+    split_nums['training'], split_nums['testing'], split_nums['validation'] = 81, 20, 8
     logger.info(f"All: {video_num}, training: {split_nums['training']}, validation: {split_nums['validation']}, testing: {split_nums['testing']}")
 
     threads_num = min(multiprocessing.cpu_count(), args.threads)
     logger.info(f'threads: {threads_num}')
 
     video_index = 0
-    for split in split_nums.keys():
+    for split in ["training", "validation", "testing"]:
         split_videos = video_names[video_index: video_index + split_nums[split]]
         frame_dir = os.path.join(tmp_dir, 'frame', split)
         divided_video_dir = os.path.join(tmp_dir, 'divide', split)
@@ -101,7 +102,7 @@ def main(args, logger):
                 pool.map(make_annotation_wrapper, args_make_annotation_list)
 
             all_annotation_dict = {}
-            tmp_annotation_paths = os.listdir(tmp_annotation_dir)
+            tmp_annotation_paths = sorted(os.listdir(tmp_annotation_dir))
             for tmp_annotation_path in tmp_annotation_paths:
                 with open(os.path.join(tmp_annotation_dir, tmp_annotation_path), 'rb') as f:
                     annotation_dict = json.load(f)
@@ -113,12 +114,12 @@ def main(args, logger):
         else:
             logger.info(f'[{split}] annotation has already been made.')
 
-        if not os.path.exists(os.path.join(tmp_dir, 'rawframes', split)):
-            logger.info(f"[{split}] making rawframes has been started.")
-            for video in split_videos:
-                elements_dir = os.path.join(divided_video_dir, video)
-                elements = os.listdir(elements_dir)
-                rawframe_dir = os.path.join(tmp_dir, 'rawframes', split, video)
+        logger.info(f"[{split}] making rawframes has been started.")
+        for video in split_videos:
+            elements_dir = os.path.join(divided_video_dir, video)
+            elements = os.listdir(elements_dir)
+            rawframe_dir = os.path.join(tmp_dir, 'rawframes', split, video)
+            if not os.path.exists(rawframe_dir):
                 for element in elements:
                     element_path = os.path.join(elements_dir, element)
                     args_extract_frame = (element_path,
@@ -131,16 +132,17 @@ def main(args, logger):
                                           args.use_opencv,
                                           args.input_frames)
                     _ = extract_frame(args_extract_frame)
-            logger.info(f"[{split}] rawframes have been made.")
-        else:
-            logger.info(f'[{split}] rawframes has already been made.')
+                logger.info(f"[{split}] [{video}] rawframes have been made.")
+            else:
+                logger.info(f'[{split}] [{video}] rawframes has already been made.')
+        logger.info(f"[{split}] making rawframes has been finished.")
         
         logger.info(f"[{split}] rawframes_validation has started.")
 
         modalities = ['RGB', 'Flow']
 
         all_err_video = []
-        for video in split_videos:
+        for video in tqdm(split_videos):
             elements_dir = os.path.join(divided_video_dir, video)
             elements = os.listdir(elements_dir)
             for element in elements:
@@ -165,7 +167,7 @@ def main(args, logger):
             if not os.path.exists(feature_dir):
                 os.makedirs(feature_dir)
             args_feature_extraction_list = []
-            for video in split_videos:
+            for video in tqdm(split_videos):
                 elements_dir = os.path.join(divided_video_dir, video)
                 elements = os.listdir(elements_dir)
                 rawframe_dir = os.path.join(tmp_dir, 'rawframes', split, video)
