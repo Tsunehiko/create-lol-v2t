@@ -4,6 +4,9 @@ __pycache__
 *.png
 *.log
 *.json
+*.joblib
+*.svg
+*.txt
 .python-version
 label.csv
 duration_frame.csv

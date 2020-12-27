@@ -8,6 +8,7 @@ import pickle
 import datetime
 import multiprocessing
 from functools import reduce
+from collections import deque
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -32,6 +33,8 @@ def parse_args():
     parser.add_argument('--annotation-dir', type=str, help='path to annotation directory')
     parser.add_argument('--frame-dir', type=str, help='path to frame directory in divided videos')
     parser.add_argument('--timecode-dir', type=str, help='path to timecode pkl directory')
+    parser.add_argument('--trash-dir', type=str, help='path to the directory which has unuse videos.')
+    parser.add_argument('--tmp-annotation-dir', type=str, help='path to the directory which has annotation.json for each video')
     parser.add_argument('--pyscenedetect-threshold', type=int, default=20, help='pyscenedetect threshold')
     parser.add_argument('--log', type=str, help='path to log')
     parser.add_argument('--threads', type=int, help='num of threads')
@@ -44,17 +47,12 @@ def parse_args():
 def main(args, logger):
 
     video_names = sorted([re.search(r"(.*)\.mp4", file_name).group(1) for file_name in os.listdir(args.video_dir)])
-    all_clips_num = 0
-    all_duration_num = 0
-    all_sentences_num = 0
-    all_words_num = 0
-    all_annotation_dict = {}
 
     annotation_dir = args.annotation_dir
     if not os.path.isdir(annotation_dir):
         os.makedirs(annotation_dir)
 
-    trash_dir_path = os.path.join("./tmp/test_interpolation/trash")
+    trash_dir_path = args.trash_dir
     if not os.path.isdir(trash_dir_path):
         os.makedirs(trash_dir_path)
 
@@ -62,11 +60,10 @@ def main(args, logger):
     if not os.path.isdir(timecode_dir):
         os.makedirs(timecode_dir)
 
+    if not os.path.exists(args.tmp_annotation_dir):
+        os.makedirs(args.tmp_annotation_dir)
+
     threads_num = min(multiprocessing.cpu_count(), args.threads, len(video_names))
-
-    # video_names_threads = [video_names[idx:idx + threads_num] for idx in range(0, len(video_names), threads_num)]
-
-    results = []
 
     args_video_names = [(args.video_dir,
                          args.caption_dir,
@@ -78,37 +75,21 @@ def main(args, logger):
                          args.pyscenedetect_threshold,
                          args.punct,
                          args.classify_model,
-                         args.mode
+                         args.mode,
+                         args.tmp_annotation_dir
                          ) for video in video_names]
 
     with multiprocessing.Pool(threads_num) as pool:
-        results = pool.map(make_annotation_wrapper, args_video_names)
+        pool.map(make_annotation_wrapper, args_video_names)
 
-    for result in results:
-        video, annotation_dict, clips_num, duration_num, sentences_num, words_num, use_list, unuse_list = result
-        logger.info(f"video:{video}")
-        logger.info(f"clips:{clips_num}")
-        logger.info(f"use  :{use_list}")
-        logger.info(f"unuse:{unuse_list}")
-        logger.info(f"duration:{duration_num} ave_duration:{duration_num/clips_num}")
-        logger.info(f"sentences:{sentences_num} ave_sentences:{sentences_num/clips_num}")
-        logger.info(f"words:{words_num} ave_words:{words_num/clips_num}")
-
-        with open(os.path.join(args.annotation_dir, "annotation.txt"), 'a') as f:
-            print(annotation_dict, file=f)
-        all_clips_num += clips_num
-        all_duration_num += duration_num
-        all_sentences_num += sentences_num
-        all_words_num += words_num
-        all_annotation_dict.update(annotation_dict)
-
-    logger.info("Entire data")
-    logger.info(f"clips:{all_clips_num} ave_clips:{all_clips_num/len(video_names)}")
-    logger.info(f"duration:{all_duration_num} ave_duration:{all_duration_num/all_clips_num}")
-    logger.info(f"sentences:{all_sentences_num} ave_sentences:{all_sentences_num/all_clips_num}")
-    logger.info(f"words:{all_words_num} ave_words:{all_words_num/all_clips_num}")
-    with open(os.path.join(args.annotation_dir, 'annotation.json'), 'w') as f:
-        json.dump(all_annotation_dict, f)
+    # all_annotation_dict = {}
+    # tmp_annotation_paths = os.listdir(args.tmp_annotation_dir)
+    # for tmp_annotation_path in tmp_annotation_paths:
+    #     with open(os.path.join(args.tmp_annotation_dir, tmp_annotation_path), 'rb') as f:
+    #         annotation_dict = json.load(f)
+    #     all_annotation_dict.update(annotation_dict)
+    # with open(os.path.join(args.annotation_dir, 'annotation.json'), 'w') as f:
+    #     json.dump(all_annotation_dict, f)
 
 
 def make_annotation_wrapper(args):
@@ -125,70 +106,103 @@ def make_annotation(video_dir,
                     pyscenedetect_threshold,
                     punct,
                     classify_model,
-                    mode):
-    cv2.setNumThreads(1)
-    print(f'{video} has been started.')
-    video_name = video + ".mp4"
-    video_path = os.path.join(video_dir, video_name)
-    caption_path = os.path.join(caption_dir, (video + ".en.vtt"))
-    video_elements_dir_path = os.path.join(divided_video_dir, video)
-    timecode_path = os.path.join(timecode_dir, video + ".pkl")
-    trash_dir_path = os.path.join(trash_dir_path, video)
-    if not os.path.exists(trash_dir_path):
-        os.makedirs(trash_dir_path)
-    if os.path.exists(timecode_path):
-        print(f'[dividing]: {video} has been started. (loading...)')
-        timecode_list = load_pickle(timecode_path)
-        print(f'[dividing]: {video} has been done. (timecode_list has been loaded.)')
-    else:
-        print(f'[dividing]: {video} has been started.')
-        timecode_list = divide_video(video_path, video_name, video_elements_dir_path, pyscenedetect_threshold)
-        print(f'[dividing]: {video} has been done.')
-        save_pickle(timecode_list, timecode_path)
-
-    clips_num = 0
-    duration_num = 0
-    sentences_num = 0
-    words_num = 0
-    use_list = []
-    unuse_list = []
-    annotation_dict = {}
-
-    video_element_names = sorted(os.listdir(video_elements_dir_path))
-    for i, video_element in enumerate(video_element_names):
-        video_element_path = os.path.join(video_elements_dir_path, video_element)
-        is_useful = classify(video_elements_dir_path,
-                             video_element,
-                             os.path.join(frame_dir, video_name, video_element),
-                             classify_model)
-        
-        if is_useful:
-            capture = cv2.VideoCapture(video_element_path)
-            fps = capture.get(cv2.CAP_PROP_FPS)
-            frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
-            duration = frame_count / fps
-            annotation_data, sentences, words = make_caption_data(video_element[:-4], caption_path, timecode_list[i], duration, fps, punct, mode)
-            if len(annotation_data) == 0:
-                shutil.move(video_element_path, trash_dir_path)
-                continue
-            print(f'[caption]: {video_element[:-4]} has been done.')
-            annotation_dict.update(annotation_data)
-
-            clips_num += 1
-            duration_num += duration
-            sentences_num += sentences
-            words_num += words
-            use_list.append(i)
+                    mode,
+                    tmp_annotation_dir
+                    ):
+    tmp_annotation_path = os.path.join(tmp_annotation_dir, video + '_annotation.json')
+    if not os.path.exists(tmp_annotation_path):
+        cv2.setNumThreads(1)
+        print(f'{video} has been started.')
+        video_name = video + ".mp4"
+        video_path = os.path.join(video_dir, video_name)
+        caption_path = os.path.join(caption_dir, (video + ".en.vtt"))
+        video_elements_dir_path = os.path.join(divided_video_dir, video)
+        timecode_path = os.path.join(timecode_dir, video + ".pkl")
+        trash_dir_path = os.path.join(trash_dir_path, video)
+        if not os.path.exists(trash_dir_path):
+            os.makedirs(trash_dir_path)
+        if os.path.exists(timecode_path):
+            print(f'[dividing]: {video} has been started. (loading...)')
+            timecode_dict = load_pickle(timecode_path)
+            print(f'[dividing]: {video} has been done. (timecode_list has been loaded.)')
         else:
-            shutil.move(video_element_path, trash_dir_path)
-            unuse_list.append(i)
+            print(f'[dividing]: {video} has been started.')
+            timecode_list = divide_video(video_path, video_name, video_elements_dir_path, pyscenedetect_threshold)
+            video_elements = [video_name[:-4] for video_name in sorted(os.listdir(video_elements_dir_path))]
+            try:
+                assert len(timecode_list) == len(video_elements), f'video:{video} timecode_list:{len(timecode_list)} video_elements:{len(video_elements)}'
+            except AssertionError as err:
+                print('AssertionError:', err)
+            elements_num = len(video_elements)
+            timecode_dict = {}
+            for i in range(elements_num):
+                timecode_dict[video_elements[i]] = timecode_list[i]
+            print(f'[dividing]: {video} has been done.')
+            save_pickle(timecode_dict, timecode_path)
 
-    print(f'{video} has been done.')
+        clips_num = 0
+        duration_num = 0
+        sentences_num = 0
+        words_num = 0
+        use_list = []
+        unuse_list = []
+        annotation_dict = {}
 
-    return (video, annotation_dict, clips_num, duration_num, sentences_num, words_num, use_list, unuse_list)
+        if args.punct == 'deepsegment':
+            segmenter = DeepSegment('en')
+        elif args.punct == 'fastpunct':
+            segmenter = FastPunct('en')
+        else:
+            raise Exception('You have probably chosen something other than fastpunct and deepsegement.')
+    
+        video_element_names = sorted(os.listdir(video_elements_dir_path))
+        for i, video_element in enumerate(video_element_names):
+            video_element_path = os.path.join(video_elements_dir_path, video_element)
+            is_useful = classify(video_elements_dir_path,
+                                 video_element,
+                                 os.path.join(frame_dir, video_name, video_element),
+                                 classify_model)
+            
+            if is_useful:
+                capture = cv2.VideoCapture(video_element_path)
+                fps = capture.get(cv2.CAP_PROP_FPS)
+                frame_count = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
+                duration = frame_count / fps
+                annotation_data, sentences, words = make_caption_data(video_element[:-4],
+                                                                      caption_path,
+                                                                      timecode_dict[video_element[:-4]],
+                                                                      duration,
+                                                                      fps,
+                                                                      punct,
+                                                                      mode,
+                                                                      segmenter)
+                if len(annotation_data) == 0:
+                    shutil.move(video_element_path, trash_dir_path)
+                    continue
+                print(f'[caption]: {video_element[:-4]} has been done.')
+                annotation_dict.update(annotation_data)
+
+                clips_num += 1
+                duration_num += duration
+                sentences_num += sentences
+                words_num += words
+                use_list.append(i)
+            else:
+                shutil.move(video_element_path, trash_dir_path)
+                unuse_list.append(i)
+        
+        with open(tmp_annotation_path, 'w') as f:
+            json.dump(annotation_dict, f)
+
+    else:
+        print(f'[caption]: {video} annotation is already exist.')
+
+    print(f'[divide/caption]: {video} has been done.')
+
+    # return (video, annotation_dict, clips_num, duration_num, sentences_num, words_num, use_list, unuse_list)
 
 
-def make_caption_data(video_element_name, caption_path, timecodes, duration, fps, punct, mode):
+def make_caption_data(video_element_name, caption_path, timecodes, duration, fps, punct, mode, segmenter):
     start, end = Timecode(fps, timecodes[0]), Timecode(fps, timecodes[1])
 
     captions = webvtt.read(caption_path)
@@ -197,7 +211,7 @@ def make_caption_data(video_element_name, caption_path, timecodes, duration, fps
 
     caption_dict_list, joined_sentence, words_num = make_caption_dict_list(captions, fps, start, end, mode)
     
-    sentences = segement_sentences(joined_sentence, punct)
+    sentences = segement_sentences(joined_sentence, segmenter, punct)
 
     if len(caption_dict_list) > 0:
         timestamps = make_timestamps(caption_dict_list, sentences, mode)
@@ -296,22 +310,28 @@ def make_caption_dict_list(captions, fps, start, end, mode='interpolation'):
     return caption_dict_list, joined_sentence, words_num
 
 
-def segement_sentences(joined_sentence, punct='deepsegment'):
+def segement_sentences(joined_sentence, segmenter, punct='deepsegment'):
     segmented_sentences = []
     if punct == 'fastpunct':
-        fastpunct = FastPunct('en')
         sentences = []
         divided_sentences = []
-        joined_sentence_sequence = len(joined_sentence)
-        while joined_sentence_sequence > 0:
-            punct_sentences = fastpunct.punct([joined_sentence[:390]], batch_size=32)
-            divided_sentences = sent_tokenize(punct_sentences[0])
-            sentences.extend(divided_sentences[:-1])
-            joined_sentence = divided_sentences[-1] + joined_sentence[390:]
-            joined_sentence_sequence = joined_sentence_sequence - 390 + len(divided_sentences[-1])
-        sentences.append(divided_sentences[-1])
+        joined_sentence_words = deque(joined_sentence.split())
+        while len(joined_sentence_words) > 0:
+            punct_target_sentence = ""
+            punct_words = []
+            while len(punct_target_sentence) < 390 or len(joined_sentence_words) > 0:
+                print("=" * 100)
+                print(joined_sentence_words)
+                punct_words.append(joined_sentence_words.popleft())
+                punct_target_sentence = reduce(lambda a, b: a + ' ' + b, punct_words)
+            punct_output_sentences = segmenter.punct([punct_target_sentence], batch_size=32)
+            divided_sentences = sent_tokenize(punct_output_sentences[0])
+            if len(divided_sentences) > 1:
+                sentences.extend(divided_sentences[:-1])
+                joined_sentence_words.extendleft(reversed(divided_sentences[-1].split()))
+            else:
+                sentences.extend(divided_sentences)
     elif punct == 'deepsegment':
-        segmenter = DeepSegment('en')
         sentences = []
         words = joined_sentence.strip().split()
         while len(words) > 0:
@@ -330,6 +350,7 @@ def segement_sentences(joined_sentence, punct='deepsegment'):
 
 
 def make_timestamps(caption_dict_list, sentences, mode='interpolation'):
+    delete_dict = {',': None, '.': None, "'": None, ' ': None, '-': None, "!": None, "?": None}
     if mode == 'wide':
         tmp_start = caption_dict_list[0]['start']
         timestamps = []
@@ -339,8 +360,8 @@ def make_timestamps(caption_dict_list, sentences, mode='interpolation'):
         for i, caption_dict in enumerate(caption_dict_list):
             if sentence_i == num_sentences + 1:
                 break
-            sentence = sentences[sentence_i].translate(str.maketrans({',': None, '.': None, "'": None, ' ': None})).lower()
-            caption = caption_dict['sentence'].translate(str.maketrans({',': None, '.': None, "'": None, ' ': None, '-': None})).lower()
+            sentence = sentences[sentence_i].translate(str.maketrans(delete_dict)).lower()
+            caption = caption_dict['sentence'].translate(str.maketrans(delete_dict)).lower()
             if caption not in sentence:
                 timestamps.append([tmp_start, caption_dict['end']])
                 sentence_i += 1
@@ -355,12 +376,12 @@ def make_timestamps(caption_dict_list, sentences, mode='interpolation'):
         num_sentences = len(sentences)
         tmp_start = caption_dict_list[0]['start']
         sentence_i = 0
-        sentence = sentences[sentence_i].translate(str.maketrans({',': None, '.': None, "'": None, ' ': None, '-': None})).lower()
+        sentence = sentences[sentence_i].translate(str.maketrans(delete_dict)).lower()
         caption_i = 0
-        caption = caption_dict_list[caption_i]['sentence'].translate(str.maketrans({',': None, '.': None, "'": None, ' ': None, '-': None})).lower()
+        caption = caption_dict_list[caption_i]['sentence'].translate(str.maketrans(delete_dict)).lower()
         tmp_caption = caption
         while sentence_i < num_sentences:
-            sentence = sentences[sentence_i].translate(str.maketrans({',': None, '.': None, "'": None, ' ': None, '-': None})).lower()
+            sentence = sentences[sentence_i].translate(str.maketrans(delete_dict)).lower()
             if len(tmp_caption) >= len(sentence):
                 tmp_end = (caption_dict_list[caption_i]['end'] - tmp_start) * (len(sentence) / len(tmp_caption)) + tmp_start
                 timestamps.append([tmp_start, tmp_end])
@@ -369,11 +390,7 @@ def make_timestamps(caption_dict_list, sentences, mode='interpolation'):
                 sentence_i += 1
             else:
                 caption_i += 1
-                tmp_caption = tmp_caption + caption_dict_list[caption_i]['sentence'].translate(str.maketrans({',': None,
-                                                                                                              '.': None,
-                                                                                                              "'": None,
-                                                                                                              ' ': None,
-                                                                                                              '-': None})).lower()
+                tmp_caption = tmp_caption + caption_dict_list[caption_i]['sentence'].translate(str.maketrans(delete_dict)).lower()
     else:
         raise Exception('You have probably chosen something other than wide and interpolation.')
     

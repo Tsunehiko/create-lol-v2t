@@ -1,6 +1,6 @@
 PYTHON="python"
 VIDEO_DIR="../data/worlds_short/videos"
-DIV_VIDEO_DIR="../dataset/tmp/interpolation_deepsegment/divided"
+DIV_VIDEO_DIR="../dataset/tmp/interpolation_deepsegment/divide"
 TIMECODE_DIR="../dataset/tmp/interpolation_deepsegment/timecode"
 PYSCENEDETECT_THRESHOLD=20
 THREADS=48

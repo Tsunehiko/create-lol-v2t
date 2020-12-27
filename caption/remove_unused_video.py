@@ -14,7 +14,7 @@ from torchvision import models, transforms
 device = torch.device('cpu')
 
 
-def classify(video_dir_path, video_name, frame_dir_path, classify_model, threshold=0.5):
+def classify(video_dir_path, video_name, frame_dir_path, classify_model, threshold=0.001):
 
     # load model
     model = models.resnext50_32x4d(pretrained=True)
@@ -33,7 +33,6 @@ def classify(video_dir_path, video_name, frame_dir_path, classify_model, thresho
     inputs = inputs.to(device)
     outputs = model(inputs)
     preds = torch.sigmoid(outputs.view(-1)) > threshold
-    # print(f"{video_name} : {preds}")
 
     return preds
 
@@ -53,6 +52,7 @@ def load_video_frame(video_dir_path, video_name, frame_dir_path, input_size):
 
     count = 0
     retaining = True
+    frame_path = ""
     while count < frame_count and retaining:
         retaining, frame = capture.read()
         if frame is None:
@@ -61,7 +61,8 @@ def load_video_frame(video_dir_path, video_name, frame_dir_path, input_size):
         if count == capture_frame:
             if frame_height != input_size or frame_width != input_size:
                 frame = cv2.resize(frame, (input_size, input_size))
-            cv2.imwrite(filename=os.path.join(frame_dir_path, f"{video_name}_image.jpg"), img=frame)
+            frame_path = os.path.join(frame_dir_path, f"{video_name}_image.jpg")
+            cv2.imwrite(filename=frame_path, img=frame)
         count += 1
 
     capture.release()
@@ -74,7 +75,6 @@ def load_video_frame(video_dir_path, video_name, frame_dir_path, input_size):
                                     transforms.ToTensor(),
                                     ])
 
-    frame_path = os.path.join(frame_dir_path, os.listdir(frame_dir_path)[0])
     with open(frame_path, 'rb') as f:
         img = Image.open(f)
         frame = img.convert('RGB')

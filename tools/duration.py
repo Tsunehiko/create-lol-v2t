@@ -6,7 +6,9 @@ from tqdm import tqdm
 
 
 def duration(video_dir, duration_dir):
-    split_names = ["train", "test", "valid"]
+    split_names = ["training", "validation", "testing"]
+    if not os.path.exists(duration_dir):
+        os.makedirs(duration_dir)
     with open(os.path.join(duration_dir, "duration_frame.csv"), 'w') as f:
         for split in split_names:
             video_dir_split = os.path.join(video_dir, split)
