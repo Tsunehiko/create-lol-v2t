@@ -32,6 +32,8 @@ scipy = "^1.5.3"
 opencv-python = "^4.4.0"
 mmaction = "^0.5.0"
 keras = "^2.4.3"
+torchtext = "^0.7.0"
+spacy = "^2.3.5"
 
 [tool.poetry.dev-dependencies]
 autopep8 = "^1.5.4"
