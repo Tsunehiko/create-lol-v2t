@@ -101,8 +101,7 @@
         "fanatic",
         "hka",
         "gam",
-        "g2",
-        "fbx"
+        "g2"
     ],
     "summoners":[
         "summoner"
@@ -138,12 +137,10 @@
         "CDR"
     ],
     "Monster": [
-        "baron",
         "Drake",
         "Herald",
         "Raptor",
-        "Krug",
-        "dragon"
+        "Krug"
     ],
     "teleport": [
         "TP"
