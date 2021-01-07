@@ -3,13 +3,11 @@ __pycache__
 *.pkl
 *.png
 *.log
-*.json
 *.joblib
 *.svg
 *.txt
+*.pdf
 .python-version
-label.csv
-duration_frame.csv
 
 data
 is_useful/stats
@@ -22,3 +20,8 @@ is_useful/2D/frame
 is_useful/2D/results
 dataset/old
 tmp
+annotation
+
+label.csv
+duration_frame.csv
+denseflow.sh

@@ -1,0 +1,587 @@
+{
+    "2018": {
+        "team": [
+            "Ascension Gaming",
+            "Cloud9",
+            "DetonatioN FocusMe",
+            "Dire Wolves",
+            "EDward Gaming",
+            "G2 Esports",
+            "G-Rex",
+            "Gambit Esports",
+            "Infinity Esports",
+            "KaBuM! e-Sports",
+            "Kaos Latin Gamers",
+            "SuperMassive Esports",
+            "100 Thieves",
+            "Afreeca Freecs",
+            "Flash Wolves",
+            "Fnatic",
+            "Gen.G",
+            "Invictus Gaming",
+            "KT Rolster",
+            "MAD Team",
+            "Phong Vũ Buffalo",
+            "Royal Never Give Up",
+            "Team Liquid",
+            "Team Vitality"
+        ],
+        "player": {
+            "Ascension Gaming": [
+                "Rockky",
+                "Lloyd",
+                "G4",
+                "Niksar",
+                "Rich",
+                "Chainarin",
+                "SunSunSun"
+            ],
+            "Cloud9": [
+                "Licorice",
+                "Blaber",
+                "Svenskeren",
+                "Jensen",
+                "Sneaky",
+                "Zeyzal",
+                "Reapered"
+            ],
+            "DetonatioN FocusMe": [
+                "Evi",
+                "Steal",
+                "Ceros",
+                "Yutapon",
+                "viviD",
+                "Kazu",
+                "Pink Bean"
+            ],
+            "Dire Wolves": [
+                "BioPanther",
+                "UDYSOF",
+                "Shernfire",
+                "Triple",
+                "k1ng",
+                "Cupcake",
+                "Rippii"
+            ],
+            "EDward Gaming": [
+                "Ray",
+                "Clearlove",
+                "Haro",
+                "Scout",
+                "iBoy",
+                "Meiko",
+                "NoFe"
+            ],
+            "G2 Esports": [
+                "Wunder",
+                "Jankos",
+                "Perkz",
+                "Hjarnan",
+                "Wadid",
+                "GrabbZ",
+                "Sacre"
+            ],
+            "G-Rex": [
+                "PK",
+                "Empt2y",
+                "Candy",
+                "Stitch",
+                "Koala",
+                "Wei",
+                "baybay"
+            ],
+            "Gambit Esports": [
+                "PvPStejos",
+                "Diamondprox",
+                "Kira",
+                "Lodik",
+                "Edward",
+                "ATRemains",
+                "Seigimitsu"
+            ],
+            "Infinity Esports": [
+                "Arce",
+                "Cotopaco",
+                "ottovaG",
+                "Relic",
+                "Renyu",
+                "SolidSnake",
+                "Soren"
+            ],
+            "KaBuM! e-Sports": [
+                "Zantins",
+                "Ranger",
+                "dyNquedo",
+                "Titan",
+                "Riyev",
+                "Hiro",
+                "Wos"
+            ],
+            "Kaos Latin Gamers": [
+                "Nate",
+                "Tierwulf",
+                "Plugo",
+                "Fix",
+                "Slow",
+                "Pierre",
+                "Zealot"
+            ],
+            "SuperMassive Esports": [
+                "fabFabulous",
+                "Stomaged",
+                "GBM",
+                "Zeitnot",
+                "SnowFlower",
+                "Irean",
+                "Secaf Reis"
+            ],
+            "100 Thieves": [
+                "Ssumday",
+                "AnDa",
+                "Ryu",
+                "Rikara",
+                "aphromoo",
+                "pr0lly",
+                "Cody Sun"
+            ],
+            "Afreeca Freecs": [
+                "Kiin",
+                "Spirit",
+                "Mowgli",
+                "Kuro",
+                "Kramer",
+                "TusiN",
+                "Ccomet"
+            ],
+            "Flash Wolves": [
+                "Hanabi",
+                "Moojin",
+                "Maple",
+                "Betty",
+                "SwordArt",
+                "WarHorse",
+                "MMD"
+            ],
+            "Fnatic": [
+                "sOAZ",
+                "Bwipo",
+                "Broxah",
+                "Caps",
+                "Rekkles",
+                "Hylissang",
+                "Dylan Falco"
+            ],
+            "Gen.G": [
+                "CuVee",
+                "Haru",
+                "Ambition",
+                "Crown",
+                "Ruler",
+                "CoreJJ",
+                "Edgar"
+            ],
+            "Invictus Gaming": [
+                "Duke",
+                "TheShy",
+                "Ning",
+                "Rookie",
+                "JackeyLove",
+                "Baolan",
+                "Kim"
+            ],
+            "KT Rolster": [
+                "Smeb",
+                "Score",
+                "Ucal",
+                "Deft",
+                "Mata",
+                "Noexcuse",
+                "Kingen"
+            ],
+            "MAD Team": [
+                "Liang",
+                "Kongyue",
+                "Benny",
+                "Uniboy",
+                "Breeze",
+                "K",
+                "GreenTea"
+            ],
+            "Phong Vũ Buffalo": [
+                "Zeros",
+                "Meliodas",
+                "XuHao",
+                "Naul",
+                "BigKoro",
+                "Palette",
+                "Ren"
+            ],
+            "Royal Never Give Up": [
+                "Letme",
+                "Karsa",
+                "Mlxg",
+                "Xiaohu",
+                "Uzi",
+                "Ming",
+                "Heart"
+            ],
+            "Team Liquid": [
+                "Impact",
+                "Xmithie",
+                "Pobelter",
+                "Doublelift",
+                "Olleh",
+                "Cain",
+                "V1per"
+            ],
+            "Team Vitality": [
+                "Cabochard",
+                "Kikis",
+                "Jiizuke",
+                "Attila",
+                "Jactroll",
+                "YamatoCannon",
+                "Dreams"
+            ]
+        }
+    },
+    "2019": {
+        "team": [
+            "Clutch Gaming",
+            "DAMWON Gaming",
+            "DetonatioN FocusMe",
+            "Flamengo Esports",
+            "Hong Kong Attitude",
+            "Isurus",
+            "Lowkey Esports",
+            "MAMMOTH",
+            "MEGA",
+            "Royal Youth",
+            "Splyce",
+            "Unicorns Of Love",
+            "ahq eSports Club",
+            "ahq",
+            "Cloud9",
+            "Fnatic",
+            "FunPlus Phoenix",
+            "G2 Esports",
+            "GAM Esports",
+            "Griffin",
+            "Invictus Gaming",
+            "J Team",
+            "Royal Never Give Up",
+            "SK Telecom T1",
+            "Team Liquid"
+        ],
+        "player": {
+            "Team Liquid": [
+                "Impact",
+                "Xmithie",
+                "Jensen",
+                "Doublelift",
+                "CoreJJ",
+                "Cain"
+            ],
+            "SK Telecom T1": [
+                "Khan",
+                "Clid",
+                "Faker",
+                "Teddy",
+                "Effort",
+                "Mata",
+                "Zefa"
+            ],
+            "Royal Never Give Up": [
+                "Langx",
+                "Karsa",
+                "Xiaohu",
+                "Uzi",
+                "Ming",
+                "Steak"
+            ],
+            "J Team": [
+                "Rest",
+                "Hana",
+                "FoFo",
+                "Lilv",
+                "Koala",
+                "REFRA1N"
+            ],
+            "Invictus Gaming": [
+                "TheShy",
+                "Leyan",
+                "Ning",
+                "Rookie",
+                "JackeyLove",
+                "Baolan",
+                "Mafa"
+            ],
+            "Griffin": [
+                "Sword",
+                "Tarzan",
+                "Chovy",
+                "Viper",
+                "Lehends",
+                "Chaos"
+            ],
+            "GAM Esports": [
+                "Zeros",
+                "Levi",
+                "Kiaya",
+                "Zin",
+                "Hieu3",
+                "Slay",
+                "Yuna",
+                "Yoshino"
+            ],
+            "G2 Esports": [
+                "Wunder",
+                "Jankos",
+                "Caps",
+                "Perkz",
+                "Mikyx",
+                "GrabbZ"
+            ],
+            "ahq eSports Club": [
+                "Ziv",
+                "Alex",
+                "Rainbow",
+                "Apex",
+                "Wako",
+                "Ysera",
+                "NeXAbc"
+            ],
+            "Cloud9": [
+                "Licorice",
+                "Svenskeren",
+                "Blaber",
+                "Nisqy",
+                "Deftly",
+                "Sneaky",
+                "Zeyzal",
+                "Reapered"
+            ],
+            "Fnatic": [
+                "Bwipo",
+                "Broxah",
+                "Nemesis",
+                "Rekkles",
+                "Hylissang",
+                "Youngbuck"
+            ],
+            "FunPlus Phoenix":[
+                "GimGoon",
+                "Tian",
+                "Doinb",
+                "Lwx",
+                "Crisp",
+                "WarHorse"
+            ],
+            "Clutch Gaming": [
+                "Huni",
+                "Lira",
+                "Damonte",
+                "Cody Sun",
+                "Vulcan",
+                "Thinkcard"
+            ],
+            "DAMWON Gaming": [
+                "Nuguri",
+                "Canyon",
+                "ShowMaker",
+                "Nuclear",
+                "BeryL",
+                "Kim"
+            ],
+            "DetonatioN FocusMe": [
+                "Evi",
+                "Steal",
+                "Ceros",
+                "Yutapon",
+                "Gaeng",
+                "Kazu"
+            ],
+            "Flamengo Esports": [
+                "Robo",
+                "Shrimp",
+                "Goku",
+                "brTT",
+                "Luci",
+                "Von"
+            ],
+            "Hong Kong Attitude": [
+                "3Z",
+                "three Z",
+                "Crash",
+                "M1ssion",
+                "Mission",
+                "MnM",
+                "Unified",
+                "Kaiwing",
+                "Chawy"
+            ],
+            "Isurus": [
+                "Buggax",
+                "Oddie",
+                "Seiya",
+                "Warangelus",
+                "Slow",
+                "Yeti"
+            ],
+            "Lowkey Esports": [
+                "Hani",
+                "DNK",
+                "Artifact",
+                "Celebrity",
+                "Venus",
+                "Nixwater"
+            ],
+            "MAMMOTH": [
+                "Fudge",
+                "Babip",
+                "Triple",
+                "k1ng",
+                "king",
+                "Destiny",
+                "Phantiks"
+            ],
+            "MEGA": [
+                "Rockky",
+                "Lloyd",
+                "G4",
+                "G four",
+                "DeuL",
+                "PoP",
+                "WarL0cK",
+                "WarLocK"
+            ],
+            "Royal Youth": [
+                "Armut",
+                "Closer",
+                "Cyeol",
+                "Pilot",
+                "Tolerant",
+                "Enatron"
+            ],
+            "Splyce": [
+                "Vizicsacsi",
+                "Xerxe",
+                "Humanoid",
+                "Kobbe",
+                "Norskeren",
+                "Duke"
+            ],
+            "Unicorns Of Love": [
+                "BOSS",
+                "AHaHaCiK",
+                "Nomanz",
+                "Innaxe",
+                "Edward",
+                "Sheepy"
+            ]
+        }
+    },
+    "2020": {
+        "team": [
+            "INTZ",
+            "Legacy Esports",
+            "LGD Gaming",
+            "MAD Lions",
+            "PSG Talon",
+            "Rainbow7",
+            "SuperMassive Esports",
+            "Team Liquid",
+            "Unicorns Of Love",
+            "V3 Esports"
+        ],
+        "player": {
+            "INTZ": [
+                "Tay",
+                "Shini",
+                "Envy",
+                "micaO",
+                "RedBert",
+                "Maestro"
+            ],
+            "Legacy Esports": [
+                "Topoon",
+                "Babip",
+                "Tally",
+                "Raes",
+                "Isles",
+                "Denian"
+            ],
+            "LGD Gaming": [
+                "Langx",
+                "Peanut",
+                "xiye",
+                "Kramer",
+                "Mark",
+                "Maizijian",
+                "Eimy"
+            ],
+            "MAD Lions": [
+                "Orome",
+                "Shad0w",
+                "Humanoid",
+                "Carzzy",
+                "Kaiser",
+                "Mac",
+                "Kaas"
+            ],
+            "PSG Talon": [
+                "Hanabi",
+                "Kongyue",
+                "Uniboy",
+                "Dee",
+                "Unified",
+                "Kaiwing",
+                "Glen"
+            ],
+            "Rainbow7": [
+                "Acce",
+                "Josedeodo",
+                "Aloned",
+                "Leza",
+                "Shadow",
+                "Skin",
+                "Fallen"
+            ],
+            "SuperMassive Esports": [
+                "Armut",
+                "KaKAO",
+                "Bolulu",
+                "Zeitnot",
+                "SnowFlower",
+                "GBM",
+                "Pades"
+            ],
+            "Team Liquid": [
+                "Impact",
+                "Broxah",
+                "Jensen",
+                "Tactical",
+                "CoreJJ",
+                "Jatt",
+                "Cain"
+            ],
+            "Unicorns Of Love": [
+                "BOSS",
+                "AHaHaCiK",
+                "Nomanz",
+                "Gadget",
+                "SaNTaS",
+                "Sheepy",
+                "Invi"
+            ],
+            "V3 Esports": [
+                "Paz",
+                "Bugi",
+                "Ace",
+                "Archer",
+                "Raina",
+                "Son"
+            ]
+        }
+    }
+}

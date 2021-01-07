@@ -1,6 +1,7 @@
 import json
 import os
 import pickle
+import datetime
 
 import torch
 import numpy as np
@@ -28,12 +29,20 @@ else:
     split_names = ["training", "testing", "validation"]
     annotation_dir = os.path.join(feature_dir, "annotation/deepsegment")
     video_dir_list = [
-        "/home/Tanaka/generate-commentary/dataset/tmp/interpolation_deepsegment/divide",
+        "/home/Tanaka/generate-commentary/dataset/tmp/short/divide",
         "/home/Tanaka/generate-commentary/dataset/tmp/large/divide"]
-log_dir = os.path.join("./information/", dataset_name)
+log_dir = os.path.join("./information/", dataset_name, str(datetime.date.today()))
 
 
 def main(logger):
+
+    all_split_num_videos = 0
+    all_split_durations = []
+    all_split_num_sentences = 0
+    all_split_num_words = 0
+    all_split_sent_durations = []
+    all_split_frames = []
+    all_split_num_words_list = []
 
     for split in split_names:
 
@@ -48,7 +57,6 @@ def main(logger):
         fps_list = []
 
         num_videos = len(videos)
-        num_videos = 1
         video_names_feature = []
         if dataset_name != 'ActivityNet':
             for video in tqdm(videos):
@@ -95,6 +103,7 @@ def main(logger):
             num_sentences += len(val['sentences'])
             for sentence in val['sentences']:
                 num_words += len(sentence.split())
+                all_split_num_words_list.append(len(sentence.split()))
 
             for timestamp in val['timestamps']:
                 start, end = timestamp
@@ -113,7 +122,15 @@ def main(logger):
             not_annotation_videos = set(video_names_feature) - set(video_names_annotation)
             logger.info(f'not annotation videos: {not_annotation_videos}')
 
-        num_annotations = len(video_names_annotation)
+        num_annotations = len(video_names_annotation)  # これが実質的な動画の数
+
+        all_split_num_videos += num_annotations
+        all_split_durations += durations
+        all_split_num_sentences += num_sentences
+        all_split_num_words += num_words
+        all_split_sent_durations += sent_durations
+        all_split_frames += frames
+
         logger.info(f"dataset_name: {dataset_name}")
         logger.info(f"num_videos: {num_videos}")
         logger.info(f'num_annotation: {num_annotations}')
@@ -144,6 +161,36 @@ def main(logger):
         ax2.hist(durations, range=(0, 250), bins=25)
         ax3.hist(sent_durations, range=(0, 20), bins=20)
         plt.savefig(os.path.join(log_dir, split + ".svg"))
+
+    logger.info("=" * 20 + " All Splits " + "=" * 20)
+    logger.info(f"durations: {sum(all_split_durations)} (sec) {sum(all_split_durations)/60} (min), Ave: {sum(all_split_durations)/all_split_num_videos} ({min(all_split_durations)} ~ {max(all_split_durations)})")
+    logger.info(f"num_sentences: {all_split_num_sentences}, Ave: {all_split_num_sentences/all_split_num_videos}")
+    logger.info(f"num_words: {all_split_num_words}, Ave: {all_split_num_words/all_split_num_sentences}")
+    logger.info(f"Ave_sent_duration: {sum(all_split_sent_durations)/all_split_num_sentences} (sec) ({min(all_split_sent_durations)} ~ {max(all_split_sent_durations)})")
+    logger.info(f"Ave_frame: {sum(all_split_frames)/all_split_num_videos} ({min(all_split_frames)} ~ {max(all_split_frames)})")
+
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111, xlabel='frames')
+    ax1.hist(all_split_frames, range=(0, max(all_split_frames)), bins=20)
+    plt.savefig(os.path.join(log_dir, "frames" + ".pdf"))
+    fig = plt.figure()
+    ax2 = fig.add_subplot(
+        111,
+        xlabel='duration(second)')
+    ax2.hist(all_split_durations, range=(0, max(all_split_durations)), bins=25)
+    plt.savefig(os.path.join(log_dir, "video_duration" + ".pdf"))
+    fig = plt.figure()
+    ax3 = fig.add_subplot(
+        111,
+        xlabel='duration(second)')
+    ax3.hist(all_split_sent_durations, range=(0, 20), bins=20)
+    plt.savefig(os.path.join(log_dir, "sentence_durations" + ".pdf"))
+    fig = plt.figure()
+    ax4 = fig.add_subplot(
+        111,
+        xlabel='Words per sentence')
+    ax4.hist(all_split_num_words_list, range=(0, max(all_split_num_words_list)), bins=20)
+    plt.savefig(os.path.join(log_dir, "sentence_words" + ".pdf"))
 
 
 def load_pickle(file):
