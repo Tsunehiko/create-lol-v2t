@@ -29,7 +29,6 @@
         "Invictus",
         "KT Rolster",
         "MAD Team",
-        "MAD",
         "Phong Vũ Buffalo",
         "Royal Never Give Up",
         "Team Vitality",
@@ -47,7 +46,6 @@
         "Royal Youth",
         "Splyce",
         "Unicorns Of Love",
-        "Unicorns",
         "ahq eSports Club",
         "ahq",
         "Fnatic",
@@ -55,7 +53,6 @@
         "Fun Plus Phoenix",
         "G2 Esports",
         "GAM Esports",
-        "GAM",
         "Griffin",
         "J Team",
         "SK Telecom T1",
@@ -104,9 +101,7 @@
         "fanatic",
         "hka",
         "gam",
-        "g2",
-        "fbx",
-        "100 T"
+        "g2"
     ],
     "summoners":[
         "summoner"
@@ -138,16 +133,14 @@
     "area of stan": [
         "AoE"
     ],
-    "cooldown reduction": [
+    "Cooldown reduction": [
         "CDR"
     ],
-    "monster": [
-        "baron",
+    "Monster": [
         "Drake",
         "Herald",
         "Raptor",
-        "Krug",
-        "dragon"
+        "Krug"
     ],
     "teleport": [
         "TP"
@@ -155,7 +148,7 @@
     "cloud control": [
         "CC"
     ],
-    "champion": [
+    "Champion": [
         "championey",
         "aatrox",
         "gp",
@@ -228,7 +221,7 @@
         "lee",
         "irelia"
     ],
-    "kr": [
+    "KR": [
         "Kearu"
     ],
     "item": [
@@ -241,7 +234,7 @@
         "Angeles",
         "klepto"
     ],
-    "leagueoflegends":[
+    "LeagueofLegends":[
         "League of Legends"
     ],
     "league": [
@@ -252,8 +245,7 @@
         "World",
         "LMS",
         "LCS",
-        "LEC",
-        "LCK"
+        "LEC"
     ],
     "caster": [
         "Kobe",
