@@ -10,8 +10,6 @@ import multiprocessing
 from functools import reduce
 from collections import deque
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 import cv2
 import webvtt
 from timecode import Timecode
@@ -19,9 +17,11 @@ from fastpunct import FastPunct
 from deepsegment import DeepSegment
 from nltk.tokenize import sent_tokenize
 
-from caption.divide import divide_video
-from caption.remove_unused_video import classify
-from logging import getLogger, StreamHandler, Formatter, FileHandler, DEBUG, INFO, WARNING, ERROR, CRITICAL
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+from caption.split import split_video  # noqa
+from caption.choose import classify  # noqa
+from logging import getLogger, StreamHandler, Formatter, FileHandler, DEBUG, INFO, WARNING, ERROR, CRITICAL  # noqa
 
 
 def parse_args():
@@ -29,9 +29,9 @@ def parse_args():
 
     parser.add_argument('--video-dir', type=str, help='path to video directory')
     parser.add_argument('--caption-dir', type=str, help='path to caption directory')
-    parser.add_argument('--divided-video-dir', type=str, help='path to divided video directory (by PySceneDetect)')
+    parser.add_argument('--split-video-dir', type=str, help='path to split video directory (by PySceneDetect)')
     parser.add_argument('--annotation-dir', type=str, help='path to annotation directory')
-    parser.add_argument('--frame-dir', type=str, help='path to frame directory in divided videos')
+    parser.add_argument('--frame-dir', type=str, help='path to frame directory in split videos')
     parser.add_argument('--timecode-dir', type=str, help='path to timecode pkl directory')
     parser.add_argument('--trash-dir', type=str, help='path to the directory which has unuse videos.')
     parser.add_argument('--tmp-annotation-dir', type=str, help='path to the directory which has annotation.json for each video')
@@ -44,7 +44,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main(args, logger):
+def main(args):
 
     video_names = sorted([re.search(r"(.*)\.mp4", file_name).group(1) for file_name in os.listdir(args.video_dir)])
 
@@ -67,7 +67,7 @@ def main(args, logger):
 
     args_video_names = [(args.video_dir,
                          args.caption_dir,
-                         args.divided_video_dir,
+                         args.split_video_dir,
                          args.frame_dir,
                          trash_dir_path,
                          timecode_dir,
@@ -80,7 +80,7 @@ def main(args, logger):
                          ) for video in video_names]
 
     with multiprocessing.Pool(threads_num) as pool:
-        pool.map(make_annotation_wrapper, args_video_names)
+        pool.map(make_caption_wrapper, args_video_names)
 
     # all_annotation_dict = {}
     # tmp_annotation_paths = os.listdir(args.tmp_annotation_dir)
@@ -92,23 +92,23 @@ def main(args, logger):
     #     json.dump(all_annotation_dict, f)
 
 
-def make_annotation_wrapper(args):
-    return make_annotation(*args)
+def make_caption_wrapper(args):
+    return make_caption(*args)
 
 
-def make_annotation(video_dir,
-                    caption_dir,
-                    divided_video_dir,
-                    frame_dir,
-                    trash_dir_path,
-                    timecode_dir,
-                    video,
-                    pyscenedetect_threshold,
-                    punct,
-                    classify_model,
-                    mode,
-                    tmp_annotation_dir
-                    ):
+def make_caption(video_dir,
+                 caption_dir,
+                 split_video_dir,
+                 frame_dir,
+                 trash_dir_path,
+                 timecode_dir,
+                 video,
+                 pyscenedetect_threshold,
+                 punct,
+                 classify_model,
+                 mode,
+                 tmp_annotation_dir
+                 ):
     tmp_annotation_path = os.path.join(tmp_annotation_dir, video + '_annotation.json')
     if not os.path.exists(tmp_annotation_path):
         cv2.setNumThreads(1)
@@ -116,18 +116,18 @@ def make_annotation(video_dir,
         video_name = video + ".mp4"
         video_path = os.path.join(video_dir, video_name)
         caption_path = os.path.join(caption_dir, (video + ".en.vtt"))
-        video_elements_dir_path = os.path.join(divided_video_dir, video)
+        video_elements_dir_path = os.path.join(split_video_dir, video)
         timecode_path = os.path.join(timecode_dir, video + ".pkl")
         trash_dir_path = os.path.join(trash_dir_path, video)
         if not os.path.exists(trash_dir_path):
             os.makedirs(trash_dir_path)
         if os.path.exists(timecode_path):
-            print(f'[dividing]: {video} has been started. (loading...)')
+            print(f'[splitting]: {video} has been started. (loading...)')
             timecode_dict = load_pickle(timecode_path)
-            print(f'[dividing]: {video} has been done. (timecode_list has been loaded.)')
+            print(f'[splitting]: {video} has been done. (timecode_list has been loaded.)')
         else:
-            print(f'[dividing]: {video} has been started.')
-            timecode_list = divide_video(video_path, video_name, video_elements_dir_path, pyscenedetect_threshold)
+            print(f'[splitting]: {video} has been started.')
+            timecode_list = split_video(video_path, video_name, video_elements_dir_path, pyscenedetect_threshold)
             video_elements = [video_name[:-4] for video_name in sorted(os.listdir(video_elements_dir_path))]
             try:
                 assert len(timecode_list) == len(video_elements), f'video:{video} timecode_list:{len(timecode_list)} video_elements:{len(video_elements)}'
@@ -137,7 +137,7 @@ def make_annotation(video_dir,
             timecode_dict = {}
             for i in range(elements_num):
                 timecode_dict[video_elements[i]] = timecode_list[i]
-            print(f'[dividing]: {video} has been done.')
+            print(f'[splitting]: {video} has been done.')
             save_pickle(timecode_dict, timecode_path)
 
         clips_num = 0
@@ -197,7 +197,7 @@ def make_annotation(video_dir,
     else:
         print(f'[caption]: {video} annotation is already exist.')
 
-    print(f'[divide/caption]: {video} has been done.')
+    print(f'[split/caption]: {video} has been done.')
 
     # return (video, annotation_dict, clips_num, duration_num, sentences_num, words_num, use_list, unuse_list)
 
@@ -314,7 +314,7 @@ def segement_sentences(joined_sentence, segmenter, punct='deepsegment'):
     segmented_sentences = []
     if punct == 'fastpunct':
         sentences = []
-        divided_sentences = []
+        split_sentences = []
         joined_sentence_words = deque(joined_sentence.split())
         while len(joined_sentence_words) > 0:
             punct_target_sentence = ""
@@ -325,12 +325,12 @@ def segement_sentences(joined_sentence, segmenter, punct='deepsegment'):
                 punct_words.append(joined_sentence_words.popleft())
                 punct_target_sentence = reduce(lambda a, b: a + ' ' + b, punct_words)
             punct_output_sentences = segmenter.punct([punct_target_sentence], batch_size=32)
-            divided_sentences = sent_tokenize(punct_output_sentences[0])
-            if len(divided_sentences) > 1:
-                sentences.extend(divided_sentences[:-1])
-                joined_sentence_words.extendleft(reversed(divided_sentences[-1].split()))
+            split_sentences = sent_tokenize(punct_output_sentences[0])
+            if len(split_sentences) > 1:
+                sentences.extend(split_sentences[:-1])
+                joined_sentence_words.extendleft(reversed(split_sentences[-1].split()))
             else:
-                sentences.extend(divided_sentences)
+                sentences.extend(split_sentences)
     elif punct == 'deepsegment':
         sentences = []
         words = joined_sentence.strip().split()
@@ -439,4 +439,4 @@ if __name__ == '__main__':
         os.makedirs(args.log)
     date = str(datetime.date.today())
     logger = init_logger(os.path.join(args.log, date))
-    main(args, logger)
+    main(args)

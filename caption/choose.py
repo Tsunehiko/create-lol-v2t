@@ -1,14 +1,14 @@
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 import cv2
 from PIL import Image
 
 import torch
 import torch.nn as nn
-import numpy as np
 from torchvision import models, transforms
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = torch.device('cpu')
