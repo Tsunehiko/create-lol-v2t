@@ -4,27 +4,27 @@ import argparse
 import cv2
 import multiprocessing
 
-os.environ["MKL_NUM_THREADS"] = "1" 
-os.environ["NUMEXPR_NUM_THREADS"] = "1" 
-os.environ["OMP_NUM_THREADS"] = "1" 
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
 
 # Standard PySceneDetect imports:
-from scenedetect.video_manager import VideoManager
-from scenedetect.scene_manager import SceneManager
+from scenedetect.video_manager import VideoManager # noqa
+from scenedetect.scene_manager import SceneManager # noqa
 # For caching detection metrics and saving/loading to a stats file
-from scenedetect.stats_manager import StatsManager
+from scenedetect.stats_manager import StatsManager # noqa
 
 # For content-aware scene detection:
-from scenedetect.detectors.content_detector import ContentDetector
+from scenedetect.detectors.content_detector import ContentDetector # noqa
 
-from scenedetect.video_splitter import split_video_ffmpeg
+from scenedetect.video_splitter import split_video_ffmpeg # noqa
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='make caption file (.json)')
 
     parser.add_argument('--video-dir', type=str, help='path to video directory')
-    parser.add_argument('--divided-video-dir', type=str, help='path to divided video directory (by PySceneDetect)')
+    parser.add_argument('--split-video-dir', type=str, help='path to split video directory (by PySceneDetect)')
     parser.add_argument('--timecode-dir', type=str, help='path to timecode pkl directory')
     parser.add_argument('--pyscenedetect-threshold', type=int, default=20, help='pyscenedetect threshold')
     parser.add_argument('--split_process')
@@ -39,7 +39,7 @@ def main(args):
     threads_num = min(multiprocessing.cpu_count(), args.threads)
     print("threads:", threads_num)
     if args.split_process:
-        divide_args_list = []
+        split_args_list = []
         video_list = os.listdir(args.video_dir)
         video_num = len(video_list)
         split_ratio = {'train': 70, 'valid': 5, 'test': 25}
@@ -50,7 +50,7 @@ def main(args):
         video_index = 0
         for split in split_nums.keys():
             split_videos = video_list[video_index: video_index + split_nums[split]]
-            video_elements_dir = os.path.join(args.divided_video_dir, split)
+            video_elements_dir = os.path.join(args.split_video_dir, split)
             timecode_dir = os.path.join(args.timecode_dir, split)
             if not os.path.exists(video_elements_dir):
                 os.makedirs(video_elements_dir)
@@ -60,38 +60,38 @@ def main(args):
                 video_path = os.path.join(args.video_dir, video)
                 video_elements_dir_path = os.path.join(video_elements_dir, video)
                 timecode_path = os.path.join(timecode_dir, video[:-4] + ".pkl")
-                divide_args = (video_path, video, video_elements_dir_path, args.pyscenedetect_threshold, timecode_path)
-                divide_args_list.append(divide_args)
+                split_args = (video_path, video, video_elements_dir_path, args.pyscenedetect_threshold, timecode_path)
+                split_args_list.append(split_args)
             with multiprocessing.Pool(threads_num) as pool:
-                pool.map(divide_video_wrapper, divide_args_list)
+                pool.map(split_video_wrapper, split_args_list)
             video_index += split_nums[split]
     else:
-        if not os.path.exists(args.divided_video_dir):
-            os.makedirs(args.divided_video_dir)
+        if not os.path.exists(args.split_video_dir):
+            os.makedirs(args.split_video_dir)
         if not os.path.exists(args.timecode_dir):
             os.makedirs(args.timecode_dir)
-        divide_args_list = []
+        split_args_list = []
         video_list = os.listdir(args.video_dir)
         for video in video_list:
             video_path = os.path.join(args.video_dir, video)
-            video_elements_dir_path = os.path.join(args.divided_video_dir, video[:-4])
+            video_elements_dir_path = os.path.join(args.split_video_dir, video[:-4])
             timecode_path = os.path.join(args.timecode_dir, video[:-4] + ".pkl")
-            divide_args = (video_path, video, video_elements_dir_path, args.pyscenedetect_threshold, timecode_path)
-            divide_args_list.append(divide_args)
+            split_args = (video_path, video, video_elements_dir_path, args.pyscenedetect_threshold, timecode_path)
+            split_args_list.append(split_args)
         with multiprocessing.Pool(threads_num) as pool:
-            pool.map(divide_video_wrapper, divide_args_list)
+            pool.map(split_video_wrapper, split_args_list)
 
 
-def divide_video_wrapper(args):
+def split_video_wrapper(args):
     video_path, video, video_elements_dir_path, pyscenedetect_threshold, timecode_path = args
     print(f"[dividing]: {video} has started.")
-    timecode_list = divide_video(video_path, video, video_elements_dir_path, pyscenedetect_threshold)
+    timecode_list = split_video(video_path, video, video_elements_dir_path, pyscenedetect_threshold)
     print(f"[dividing]: {video} has finished.")
     save_pickle(timecode_list, timecode_path)
     print(f"[saving]: {video}'s timecode_list has been saved.")
 
 
-def divide_video(video_path, video_name, save_dir_path, threshold):
+def split_video(video_path, video_name, save_dir_path, threshold):
     """
     Oversegment the input video using PySceneDetect
 
@@ -102,7 +102,7 @@ def divide_video(video_path, video_name, save_dir_path, threshold):
     video_name : string
         name of input video
     save_dir_path : string
-        path to saving divided elements
+        path to saving split elements
     threshold : int
         PySceneDetect threshold
     """

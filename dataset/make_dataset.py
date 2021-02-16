@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from caption.make_annotation_parallel import make_annotation_wrapper  # noqa
+from caption.make_caption import make_caption_wrapper  # noqa
 from tools.validation import rawframe_validation, feature_validation  # noqa
 from tools.duration import duration  # noqa
 from mmaction2.tools.data.build_rawframes_custom import extract_frame  # noqa
@@ -83,23 +83,23 @@ def main(args, logger):
                 os.makedirs(trash_dir)
             if not os.path.exists(timecode_dir):
                 os.makedirs(timecode_dir)
-            args_make_annotation_list = [(args.video_dir,
-                                          args.caption_dir,
-                                          divided_video_dir,
-                                          frame_dir,
-                                          trash_dir,
-                                          timecode_dir,
-                                          video,
-                                          args.pyscenedetect_threshold,
-                                          args.punct,
-                                          args.classify_model,
-                                          args.mode,
-                                          tmp_annotation_dir
-                                          )
-                                         for video in split_videos]
+            args_make_caption_list = [(args.video_dir,
+                                       args.caption_dir,
+                                       divided_video_dir,
+                                       frame_dir,
+                                       trash_dir,
+                                       timecode_dir,
+                                       video,
+                                       args.pyscenedetect_threshold,
+                                       args.punct,
+                                       args.classify_model,
+                                       args.mode,
+                                       tmp_annotation_dir
+                                       )
+                                      for video in split_videos]
 
             with multiprocessing.Pool(threads_num) as pool:
-                pool.map(make_annotation_wrapper, args_make_annotation_list)
+                pool.map(make_caption_wrapper, args_make_caption_list)
 
             all_annotation_dict = {}
             tmp_annotation_paths = sorted(os.listdir(tmp_annotation_dir))
